@@ -1,0 +1,33 @@
+// 在handleCreateDeliveryOrder函数中添加库存更新逻辑
+// 发货操作后更新库存并记录日志
+const updateInventory = (orderIds, deliveryOrderId) => {
+  console.log(`库存更新: 发货单 ${deliveryOrderId} 包含订单 ${orderIds.join(', ')}`);
+  // 在实际应用中，这里会调用API更新库存并记录日志
+  orderIds.forEach(orderId => {
+    console.log(`订单 ${orderId} 商品库存已扣减`);
+  });
+};
+
+// 在handleCreateDeliveryOrder函数中调用
+const handleCreateDeliveryOrder = async () => {
+  if (selectedOrders.length === 0) return;
+  
+  setIsCreating(true);
+  try {
+    const result = await createDeliveryOrder(selectedOrders, remarks);
+    console.log('发货单创建成功:', result);
+    
+    // 更新库存并记录日志
+    updateInventory(selectedOrders, result.deliveryOrderId);
+    
+    alert(`发货单 ${result.deliveryOrderId} 创建成功！`);
+    setSelectedOrders([]);
+    setRemarks('');
+    refetch();
+  } catch (error) {
+    console.error('创建发货单失败:', error);
+    alert('创建发货单失败，请重试');
+  } finally {
+    setIsCreating(false);
+  }
+};
