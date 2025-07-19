@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -188,7 +187,7 @@ const SalesOrderList = () => {
                     <TableCell>¥{order.totalAmount.toLocaleString()}</TableCell>
                     <TableCell>¥{order.paidAmount.toLocaleString()}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
                         order.status === '已完成' ? 'bg-green-100 text-green-800' :
                         order.status === '已发货' ? 'bg-blue-100 text-blue-800' :
                         order.status === '已付款' ? 'bg-yellow-100 text-yellow-800' :
@@ -297,4 +296,3 @@ const SalesOrderList = () => {
 };
 
 export default SalesOrderList;
-
