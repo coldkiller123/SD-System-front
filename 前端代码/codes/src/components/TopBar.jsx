@@ -1,9 +1,9 @@
-import { Menu, Bell, User, Search } from 'lucide-react';
+import { Menu, Bell, User, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
-export const TopBar = ({ toggleSidebar }) => {
+export const TopBar = ({ toggleSidebar, user, onLogout }) => {
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="flex items-center justify-between px-6 py-3">
@@ -38,13 +38,21 @@ export const TopBar = ({ toggleSidebar }) => {
                 <div className="bg-blue-100 text-blue-800 rounded-full p-1">
                   <User className="h-5 w-5" />
                 </div>
-                <span className="hidden md:inline">管理员</span>
+                <span className="hidden md:inline">
+                  {user?.name || '用户'} ({user?.role || '未知角色'})
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>个人设置</DropdownMenuItem>
               <DropdownMenuItem>切换角色</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">退出登录</DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-red-600"
+                onClick={onLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                退出登录
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
