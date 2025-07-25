@@ -46,7 +46,7 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
     }
   });
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     // 如果是新增，生成订单ID
     if (!initialData) {
       data.id = 'SO' + generateId().substring(0, 5);
@@ -57,8 +57,20 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
       data.modifiedBy = '当前用户';
     }
     
-    console.log('订单信息提交成功:', data);
-    onSuccess();
+    //console.log('订单信息提交成功:', data);
+        const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      const result = await res.json();
+      alert('订单创建成功，订单号：' + result.id);
+      onSuccess();
+    } else {
+      alert('提交失败');
+    }
+    //onSuccess();
   };
 
   // 计算总金额

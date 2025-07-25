@@ -1,0 +1,18 @@
+{
+  "inquiries": [
+    {
+      "inquiryId": "IQ1001",
+      "customerId": "C1501",
+      "customerName": "客户1501",
+      "productName": "商品1",
+      "productId": "P2001",
+      "quantity": 10,
+      "unit": "个",
+      "salesPerson": "销售员1",
+      "inquiryDate": "2025-07-01T10:00:00Z",
+      "status": "未报价"
+    }
+  ],
+  "total": 45,
+  "pageCount": 5
+}

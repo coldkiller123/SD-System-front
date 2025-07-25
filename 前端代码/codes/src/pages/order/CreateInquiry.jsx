@@ -58,24 +58,38 @@ const CreateInquiry = ({ onSuccess, onCancel }) => {
     }
   });
 
-  const onSubmit = (data) => {
-    // 生成唯一询价单号
-    const inquiryId = 'IQ' + generateId().substring(0, 5);
-    
-    // 获取当前用户作为销售人员
-    const salesPerson = '管理员'; // 实际应用中应从登录信息获取
-    
-    const inquiryData = {
-      inquiryId, // 统一使用 inquiryId
-      ...data,
-      salesPerson,
-      status: '未报价',
-      createdAt: new Date().toISOString()
-    };
-    
-    console.log('询价单提交成功:', inquiryData);
-    onSuccess();
+const onSubmit = async (data) => {
+  // 生成唯一询价单号
+  const inquiryId = 'IQ' + generateId().substring(0, 5);
+
+  // 获取当前用户作为销售人员
+  const salesPerson = '管理员';
+
+  const inquiryData = {
+    inquiryId,
+    ...data,
+    salesPerson,
+    status: '未报价',
+    createdAt: new Date().toISOString()
   };
+
+  // 发送POST请求到mock接口
+  const res = await fetch('/api/inquiries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(inquiryData)
+  });
+
+  if (res.ok) {
+    // 可选：处理返回数据
+    // const result = await res.json();
+    onSuccess();
+  } else {
+    // 可选：错误处理
+    alert('提交失败');
+  }
+};
+
 
   // 处理商品选择
   const handleProductSelect = (productName) => {
