@@ -10,48 +10,18 @@ import { Search, Plus, Filter, Download, Eye, CheckCircle, XCircle } from 'lucid
 import { formatDate } from '@/lib/utils';
 import CreateInquiry from './CreateInquiry.jsx';
 
-// 模拟API获取询价单数据
+// 获取询价单数据（通过接口）
 const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // 模拟数据
-  const allInquiries = Array.from({ length: 45 }, (_, i) => ({
-    inquiryId: `IQ${1000 + i}`, // 统一使用 inquiryId
-    customerId: `C${1500 + (i % 20)}`,
-    customerName: `客户${1500 + (i % 20)}`,
-    productName: `商品${i + 1}`,
-    productId: `P${2000 + i}`,
-    quantity: Math.floor(1 + Math.random() * 100),
-    unit: ['个', '件', '千克', '米', '箱'][i % 5],
-    salesPerson: `销售员${i % 5 + 1}`,
-    inquiryDate: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString(),
-    status: i % 3 === 0 ? '已报价' : '未报价',
-    createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString()
-  }));
+  const params = new URLSearchParams();
+  if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
+  if (pageSize !== undefined) params.append('pageSize', pageSize);
+  if (filters.inquiryId) params.append('inquiryId', filters.inquiryId);
+  if (filters.customerName) params.append('customerName', filters.customerName);
+  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
-  // 应用筛选
-  let filtered = allInquiries;
-  if (filters.inquiryId) {
-    filtered = filtered.filter(i => i.inquiryId.includes(filters.inquiryId));
-  }
-  if (filters.customerName) {
-    filtered = filtered.filter(i => i.customerName.includes(filters.customerName));
-  }
-  if (filters.status && filters.status !== 'all') {
-    filtered = filtered.filter(i => i.status === filters.status);
-  }
-
-  // 分页
-  const start = pageIndex * pageSize;
-  const end = start + pageSize;
-  const pageCount = Math.ceil(filtered.length / pageSize);
-  
-  return {
-    inquiries: filtered.slice(start, end),
-    total: filtered.length,
-    pageCount
-  };
+  const res = await fetch(`/api/inquiries?${params.toString()}`);
+  if (!res.ok) throw new Error('网络错误');
+  return await res.json();
 };
 
 const InquiryQuote = () => {

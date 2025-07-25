@@ -10,58 +10,19 @@ import { Search, Plus, Filter, Download, Eye, Pencil } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import SalesOrderForm from './SalesOrderForm.jsx';
 
-// 模拟API获取销售订单数据
+// 获取销售订单数据（通过接口）
 const fetchSalesOrders = async ({ pageIndex, pageSize, filters }) => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // 模拟数据
-  const allOrders = Array.from({ length: 65 }, (_, i) => ({
-    id: `SO${1000 + i}`,
-    customerId: `C${1500 + (i % 20)}`,
-    customerName: `客户${1500 + (i % 20)}`,
-    productName: `商品${i + 1}`,
-    productId: `P${2000 + i}`,
-    quantity: Math.floor(1 + Math.random() * 100),
-    unitPrice: Math.floor(100 + Math.random() * 900),
-    totalAmount: 0, // 稍后计算
-    paidAmount: 0, // 稍后计算
-    status: ['待付款', '已付款', '已发货', '已完成', '已取消'][i % 5],
-    salesPerson: `销售员${i % 5 + 1}`,
-    createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString(),
-    remarks: i % 3 === 0 ? '加急订单' : i % 3 === 1 ? '普通订单' : '大客户订单'
-  }));
+  const params = new URLSearchParams();
+  if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
+  if (pageSize !== undefined) params.append('pageSize', pageSize);
+  if (filters.orderId) params.append('orderId', filters.orderId);
+  if (filters.customerName) params.append('customerName', filters.customerName);
+  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
-  // 计算金额
-  allOrders.forEach(order => {
-    order.totalAmount = order.quantity * order.unitPrice;
-    order.paidAmount = order.status === '待付款' ? 0 : 
-                       order.status === '已付款' ? order.totalAmount * 0.5 :
-                       order.totalAmount;
-  });
-
-  // 应用筛选
-  let filtered = allOrders;
-  if (filters.orderId) {
-    filtered = filtered.filter(o => o.id.includes(filters.orderId));
-  }
-  if (filters.customerName) {
-    filtered = filtered.filter(o => o.customerName.includes(filters.customerName));
-  }
-  if (filters.status && filters.status !== 'all') {
-    filtered = filtered.filter(o => o.status === filters.status);
-  }
-
-  // 分页
-  const start = pageIndex * pageSize;
-  const end = start + pageSize;
-  const pageCount = Math.ceil(filtered.length / pageSize);
-  
-  return {
-    orders: filtered.slice(start, end),
-    total: filtered.length,
-    pageCount
-  };
+  const res = await fetch(`/api/orders?${params.toString()}`);
+  if (!res.ok) throw new Error('网络错误');
+  return await res.json();
+  console.log(res)
 };
 
 const SalesOrderList = () => {
@@ -178,46 +139,46 @@ const SalesOrderList = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.orders.map((order) => (
-                  <TableRow key={order.id} className="hover:bg-blue-50">
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.customerName}</TableCell>
-                    <TableCell>{order.productName}</TableCell>
-                    <TableCell>{order.quantity}</TableCell>
-                    <TableCell>¥{order.totalAmount.toLocaleString()}</TableCell>
-                    <TableCell>¥{order.paidAmount.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        order.status === '已完成' ? 'bg-green-100 text-green-800' :
-                        order.status === '已发货' ? 'bg-blue-100 text-blue-800' :
-                        order.status === '已付款' ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === '待付款' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-blue-600 hover:bg-blue-100"
-                        onClick={() => window.location.href = `#/order/detail/${order.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-blue-600 hover:bg-blue-100 ml-1"
-                        onClick={() => handleEdit(order)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+  {(data?.orders ?? []).map((order) => (
+    <TableRow key={order.id} className="hover:bg-blue-50">
+      <TableCell className="font-medium">{order.id}</TableCell>
+      <TableCell>{order.customerName}</TableCell>
+      <TableCell>{order.productName}</TableCell>
+      <TableCell>{order.quantity}</TableCell>
+      <TableCell>¥{order.totalAmount.toLocaleString()}</TableCell>
+      <TableCell>¥{order.paidAmount.toLocaleString()}</TableCell>
+      <TableCell>
+        <span className={`px-2 py-0.5 rounded-full text-xs ${
+          order.status === '已完成' ? 'bg-green-100 text-green-800' :
+          order.status === '已发货' ? 'bg-blue-100 text-blue-800' :
+          order.status === '已付款' ? 'bg-yellow-100 text-yellow-800' :
+          order.status === '待付款' ? 'bg-gray-100 text-gray-800' :
+          'bg-red-100 text-red-800'
+        }`}>
+          {order.status}
+        </span>
+      </TableCell>
+      <TableCell>{formatDate(order.createdAt)}</TableCell>
+      <TableCell className="text-right">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="text-blue-600 hover:bg-blue-100"
+          onClick={() => window.location.href = `#/order/detail/${order.id}`}
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          className="text-blue-600 hover:bg-blue-100 ml-1"
+          onClick={() => handleEdit(order)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  ))}
               </TableBody>
             </Table>
           </div>

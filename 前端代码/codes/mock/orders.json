@@ -1,0 +1,36 @@
+{
+  "orders": [
+    {
+      "id": "SO1001",
+      "customerId": "C1501",
+      "customerName": "客户1501",
+      "productName": "商品1",
+      "productId": "P2001",
+      "quantity": 10,
+      "unitPrice": 299,
+      "totalAmount": 2990,
+      "paidAmount": 2990,
+      "status": "已付款",
+      "salesPerson": "销售员1",
+      "createdAt": "2025-07-01T10:00:00Z",
+      "remarks": "加急订单"
+    },
+    {
+      "id": "SO1002",
+      "customerId": "C1502",
+      "customerName": "客户1502",
+      "productName": "商品2",
+      "productId": "P2002",
+      "quantity": 5,
+      "unitPrice": 499,
+      "totalAmount": 2495,
+      "paidAmount": 2495,
+      "status": "已发货",
+      "salesPerson": "销售员2",
+      "createdAt": "2025-07-02T11:00:00Z",
+      "remarks": ""
+    }
+  ],
+  "total": 65,
+  "pageCount": 7
+}
