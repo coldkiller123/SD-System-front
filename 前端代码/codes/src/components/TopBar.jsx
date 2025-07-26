@@ -2,6 +2,7 @@ import { Menu, Bell, User, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { RoleSelector } from './RoleSelector';
 
 export const TopBar = ({ toggleSidebar, user, onLogout }) => {
   return (
@@ -32,6 +33,8 @@ export const TopBar = ({ toggleSidebar, user, onLogout }) => {
             <Bell className="h-5 w-5" />
           </Button>
           
+          <RoleSelector />
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center space-x-2">
@@ -39,13 +42,12 @@ export const TopBar = ({ toggleSidebar, user, onLogout }) => {
                   <User className="h-5 w-5" />
                 </div>
                 <span className="hidden md:inline">
-                  {user?.name || '用户'} ({user?.role || '未知角色'})
+                  {user?.name || '用户'}
                 </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>个人设置</DropdownMenuItem>
-              <DropdownMenuItem>切换角色</DropdownMenuItem>
               <DropdownMenuItem 
                 className="text-red-600"
                 onClick={onLogout}

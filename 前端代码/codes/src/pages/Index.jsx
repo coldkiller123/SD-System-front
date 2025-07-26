@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, FileText, Truck, Receipt, Plus, ShoppingCart, Package, RefreshCw } from 'lucide-react';
+import { Users, FileText, Truck, Receipt, Plus, ShoppingCart, Package, RefreshCw, Shield } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
+import { PermissionCard } from '@/components/PermissionCard';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState(null);
+  const { currentRole, originalRole, canSwitchRole, permissions } = usePermission();
+  const navigate = useNavigate();
 
   // 获取用户信息
   useEffect(() => {
@@ -47,9 +52,48 @@ const Index = () => {
     }
   ];
 
+  const modules = [
+    {
+      id: 'customer',
+      title: '客户管理',
+      description: '管理客户信息、联系记录和信用评估',
+      icon: Users,
+      color: 'blue',
+      path: '/customer/list'
+    },
+    {
+      id: 'sales',
+      title: '销售管理',
+      description: '处理销售订单、报价和合同管理',
+      icon: ShoppingCart,
+      color: 'green',
+      path: '/order/sales'
+    },
+    {
+      id: 'inventory',
+      title: '库存管理',
+      description: '管理库存、发货单和物流跟踪',
+      icon: Package,
+      color: 'purple',
+      path: '/inventory/delivery-orders'
+    },
+    {
+      id: 'finance',
+      title: '发票管理',
+      description: '处理发票开具、收款和财务对账',
+      icon: Receipt,
+      color: 'orange',
+      path: '/finance/invoice-management'
+    }
+  ];
+
   const handleRefresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 1000);
+  };
+
+  const handleModuleClick = (path) => {
+    navigate(path);
   };
 
   return (
@@ -60,8 +104,19 @@ const Index = () => {
           欢迎回来，{user?.name || '用户'}！
         </h1>
         <p className="text-blue-100">
-          今天是 {new Date().toLocaleDateString('zh-CN')}，您当前的角色是：{user?.role || '未知角色'}
+          今天是 {new Date().toLocaleDateString('zh-CN')}，您当前的角色是：{currentRole}
         </p>
+        {canSwitchRole && (
+          <p className="text-sm text-blue-200 mt-1 flex items-center">
+            <Shield className="h-4 w-4 mr-1" />
+            系统管理员权限，可切换至其他角色
+          </p>
+        )}
+        {!canSwitchRole && currentRole !== originalRole && (
+          <p className="text-sm text-yellow-200 mt-1">
+            注意：您当前使用的是临时角色，实际角色为 {originalRole}
+          </p>
+        )}
       </div>
 
       {/* 数据看板区域 */}
@@ -94,6 +149,21 @@ const Index = () => {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* 权限管理卡片区域 */}
+      <div>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">功能模块权限</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {modules.map((module) => (
+            <PermissionCard
+              key={module.id}
+              module={module}
+              hasPermission={permissions[module.id]}
+              onClick={() => handleModuleClick(module.path)}
+            />
+          ))}
+        </div>
       </div>
       
       {/* 快捷操作区域 */}
@@ -158,20 +228,23 @@ const Index = () => {
           <CardContent className="space-y-4">
             <Button 
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => window.location.href = '#/customer/new'}
+              onClick={() => navigate('/customer/new')}
+              disabled={!permissions.customer}
             >
               <Plus className="mr-2 h-4 w-4" /> 新建客户
             </Button>
             <Button 
               className="w-full bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => window.location.href = '#/order/sales'}
+              onClick={() => navigate('/order/sales')}
+              disabled={!permissions.sales}
             >
               <ShoppingCart className="mr-2 h-4 w-4" /> 新建销售订单
             </Button>
             <Button 
               variant="outline" 
               className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
-              onClick={() => console.log('查看库存变化功能待开发')}
+              onClick={() => navigate('/inventory/delivery-orders')}
+              disabled={!permissions.inventory}
             >
               <Package className="mr-2 h-4 w-4" /> 查看库存变化
             </Button>

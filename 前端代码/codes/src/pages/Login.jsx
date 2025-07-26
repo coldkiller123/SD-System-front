@@ -45,11 +45,11 @@ const Login = () => {
 
   // 模拟用户角色数据
   const mockUsers = {
-    'sales': { password: 'sales123', role: '销售代表', name: '销售小张' },
-    'manager': { password: 'manager123', role: '销售经理', name: '李经理' },
-    'warehouse': { password: 'warehouse123', role: '仓库管理员', name: '王仓库' },
-    'finance': { password: 'finance123', role: '财务人员', name: '赵财务' },
-    'admin': { password: 'admin123', role: '系统管理员', name: '系统管理员' }
+    'sales': { password: 'sales123', role: '销售代表', name: '销售小孙' },
+    'manager': { password: 'manager123', role: '销售经理', name: '销售组长凝凝子' },
+    'warehouse': { password: 'warehouse123', role: '仓库管理员', name: '炼乳会' },
+    'finance': { password: 'finance123', role: '财务人员', name: '缰绳喜' },
+    'admin': { password: 'admin123', role: '系统管理员', name: 'codekiller神' }
   };
 
   const handleLogin = async (e) => {
