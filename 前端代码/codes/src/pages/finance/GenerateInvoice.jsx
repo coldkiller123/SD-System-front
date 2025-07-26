@@ -11,7 +11,7 @@ import InvoicePreview from '@/components/invoice/InvoicePreview';
 
 // 模拟API获取发货单详情
 const fetchDeliveryOrder = async (id) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 500)); //模拟 API 请求的耗时
   
   return {
     id: `DO${id}`,
@@ -49,11 +49,11 @@ const fetchDeliveryOrder = async (id) => {
   };
 };
 
-const GenerateInvoice = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const deliveryOrderId = location.pathname.split('/').pop();
-  
+const GenerateInvoice = ({ deliveryOrderId, customer }) => {
+  //const location = useLocation();
+  //const navigate = useNavigate();
+  //const deliveryOrderId = location.pathname.split('/').pop();
+
   const { data: deliveryOrder, isLoading, isError } = useQuery({
     queryKey: ['deliveryOrder', deliveryOrderId],
     queryFn: () => fetchDeliveryOrder(deliveryOrderId)
@@ -80,7 +80,7 @@ const GenerateInvoice = () => {
 
     try {
       const dataUrl = await toPng(invoiceElement, { 
-        backgroundColor: '#ffffff',
+        backgroundColor: '#ffffffff',
         quality: 1.0 
       });
 
@@ -102,34 +102,9 @@ const GenerateInvoice = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          className="text-blue-600 hover:bg-blue-50"
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" /> 返回
-        </Button>
-        
-        <div className="flex space-x-3">
-          <Button 
-            variant="outline" 
-            className="border-blue-300 text-blue-600"
-            onClick={handleExportPDF}
-          >
-            <Download className="mr-2 h-4 w-4" /> 导出PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            className="border-blue-300 text-blue-600"
-            onClick={handlePrint}
-          >
-            <Printer className="mr-2 h-4 w-4" /> 打印
-          </Button>
-        </div>
-      </div>
       
-      <Card className="border border-blue-100">
+      
+      <Card className="border border-blue-100 wide-card">
         <CardHeader className="bg-blue-50">
           <CardTitle className="flex items-center">
             <FileText className="h-5 w-5 mr-2 text-blue-800" />
@@ -138,7 +113,7 @@ const GenerateInvoice = () => {
         </CardHeader>
         <CardContent className="p-0">
           <div id="invoice-preview" className="p-8 bg-white">
-            <InvoicePreview deliveryOrder={deliveryOrder} />
+            <InvoicePreview deliveryOrder={deliveryOrder} customer={customer}/>
           </div>
         </CardContent>
         <CardFooter className="bg-blue-50 border-t border-blue-100 py-3 justify-center">
