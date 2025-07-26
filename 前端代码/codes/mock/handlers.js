@@ -3,6 +3,72 @@ import ordersData from './orders.json';
 import inquiriesData from './inquiries.json';
 
 export const handlers = [
+  // ============= 库存管理接口 =============
+  // 1. 获取未发货订单
+  rest.get('/api/orders/unshipped', (req, res, ctx) => {
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '0');
+    const pageSize = parseInt(url.searchParams.get('page_size') || '10');
+    const search = url.searchParams.get('search') || '';
+
+    // 固定总订单数为85
+    const totalOrders = 85; 
+    
+    // 计算当前页实际应返回的数据量
+    const startIndex = page * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalOrders);
+    const currentPageSize = endIndex - startIndex;
+
+    // 生成当前页数据
+    const orders = Array.from({ length: currentPageSize }, (_, i) => {
+      const globalIndex = startIndex + i; // 全局索引
+      const orderId = `SO${5000 + globalIndex}`;
+      const customerId = `C${2000 + (globalIndex % 15)}`;
+      
+      return {
+        id: orderId,
+        customerId,
+        customerName: `客户${customerId.substring(1)}`,
+        productName: `商品${Math.floor(Math.random() * 50)}`,
+        quantity: Math.floor(1 + Math.random() * 20),
+        createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        totalAmount: Math.floor(500 + Math.random() * 5000),
+        status: '已付款'
+      };
+    });
+
+    return res(
+      ctx.status(200),
+      ctx.json({
+        code: 200,
+        message: "成功",
+        data: {
+          total: totalOrders, // 总订单数85
+          page,
+          page_size: pageSize,
+          orders
+        }
+      })
+    );
+  }),
+
+  // 2. 创建发货单
+  rest.post('/api/delivery-orders', async (req, res, ctx) => {
+    const body = await req.json();
+    const { order_ids, deliveryDate, warehouseManager } = body;
+    
+    // 直接返回成功响应（无状态检查）
+    return res(
+      ctx.status(200),
+      ctx.json({
+        code: 200,
+        message: "成功",
+        deliveryOrderId: `DO-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+      })
+    );
+  }),
+
+  // ============= 原有接口 =============
     // SalesOrderForm接口模拟-新建销售订单
   rest.post('/api/orders', async (req, res, ctx) => {
     const data = await req.json();
