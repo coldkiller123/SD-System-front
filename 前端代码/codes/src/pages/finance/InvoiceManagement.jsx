@@ -7,39 +7,54 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, FileText, Printer, Download, ArrowLeft } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import InvoiceDetail from '@/components/invoice/InvoiceDetail';
+import { useNavigate } from 'react-router-dom';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
+import GenerateInvoice from "./GenerateInvoice";
+import InvoicePreview from '@/components/invoice/InvoicePreview';
+import { X } from "lucide-react";
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
+import { useCallback } from 'react';
+
 
 // Mock API to fetch orders with "已收货" status
-const fetchDeliveredOrders = async () => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return Array.from({ length: 15 }, (_, i) => ({
-    id: `SO${3000 + i}`,
-    customerId: `C${1500 + (i % 10)}`,
-    customerName: `客户${1500 + (i % 10)}`,
-    amount: Math.floor(1000 + Math.random() * 9000),
-    orderDate: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString(),
-    deliveryDate: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)).toISOString(),
-    status: '已收货',
-    hasInvoice: i > 5, // Some orders already have invoices
-    invoiceId: i > 5 ? `INV${Math.floor(10000 + Math.random() * 90000)}` : null
-  }));
+
+const fetchDeliveredOrders= async () => {
+  try {
+    const res = await fetch('/api/orders/delivered');
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const json = await res.json();
+    return json.data || []; // 确保总是返回数组
+  } catch (error) {
+    console.error('发票数据获取失败:', error);
+    return []; // 返回空数组避免UI崩溃
+  }
+};
+// Mock API to generate invoice
+// utils/api.js 或 InvoiceManagement.jsx 中
+const generateInvoice = async (orderId) => {
+  try {
+    const res = await fetch(`/api/invoice/generate/${orderId}`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error('生成发票失败:', error);
+    return null;
+  }
 };
 
-// Mock API to generate invoice
-const generateInvoice = async (orderId) => {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return {
-    invoiceId: `INV${Math.floor(10000 + Math.random() * 90000)}`,
-    orderId,
-    issueDate: new Date().toISOString(),
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    taxRate: 0.13,
-    status: '待付款'
-  };
-};
 
 const InvoiceManagement = () => {
+  const navigate = useNavigate();
+   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -50,73 +65,118 @@ const InvoiceManagement = () => {
   });
 
   const handleGenerateInvoice = async (order) => {
-    setIsGenerating(true);
-    try {
-      const invoice = await generateInvoice(order.id);
+  setIsGenerating(true);  // 开始生成时设置生成中状态
+  try {
+    // 调用 generateInvoice 函数获取模拟发票数据
+    const invoice = await generateInvoice(order.id);
+
+    // 如果发票数据成功返回，更新状态
+    if (invoice) {
       setInvoiceData({
-        ...invoice,
-        order,
+        ...invoice,  // 将从接口获取到的发票数据直接传递
+        order,  // 保留原订单数据
         customer: {
           id: order.customerId,
           name: order.customerName,
-          address: `地址${order.id.substring(3)}`,
-          taxId: `TAX${Math.floor(10000 + Math.random() * 90000)}`
+          address: invoice.customer.address,
+          taxId: invoice.customer.taxId,
         },
-        items: [
-          {
-            id: `P${4000 + parseInt(order.id.substring(3))}`,
-            name: `商品${parseInt(order.id.substring(3)) + 1}`,
-            quantity: Math.floor(1 + Math.random() * 10),
-            unitPrice: Math.floor(100 + Math.random() * 500),
-            description: '标准商品'
-          },
-          {
-            id: `P${4001 + parseInt(order.id.substring(3))}`,
-            name: `商品${parseInt(order.id.substring(3)) + 2}`,
-            quantity: Math.floor(1 + Math.random() * 5),
-            unitPrice: Math.floor(200 + Math.random() * 800),
-            description: '高级商品'
-          }
-        ]
+        // 不再手动构建商品项，这些项从 API 返回的 invoice.items 中直接获取
+        items: invoice.items || [], // 使用返回的商品列表
       });
-      
-      // Update order status in local data
-      const updatedOrders = orders.map(o => 
+
+      // 更新订单的发票状态和 ID
+      const updatedOrders = orders.map(o =>
         o.id === order.id ? { ...o, hasInvoice: true, invoiceId: invoice.invoiceId } : o
       );
+
+      // 使用 refetch 来更新订单列表数据
       refetch({ orders: updatedOrders });
-      
+
+      // 设置选中的订单为当前订单
       setSelectedOrder(order);
-    } catch (error) {
-      console.error('生成发票失败:', error);
-    } finally {
-      setIsGenerating(false);
     }
-  };
+  } catch (error) {
+    console.error('生成发票失败:', error);
+  } finally {
+    setIsGenerating(false);  // 完成生成时，取消生成中状态
+  }
+};
+
+
+  // 打印函数
+const handlePrintClick = useCallback(() => {
+  window.print();
+}, []);
+
+// 导出 PDF 函数
+const handleExportPDFClick = useCallback(async (invoiceId) => {
+  const invoiceElement = document.getElementById('invoice-preview');
+  if (!invoiceElement) return;
+
+  try {
+    const dataUrl = await toPng(invoiceElement, {
+      backgroundColor: '#ffffffff',
+      quality: 1.0
+    });
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgProps = pdf.getImageProperties(dataUrl);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`invoice_${invoiceId}.pdf`);
+  } catch (error) {
+    console.error('导出PDF失败:', error);
+    alert('导出PDF失败，请重试');
+  }
+}, []);
 
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full">
+          <style>{`
+      @media print {
+        body * {
+          visibility: hidden !important;
+        }
+        #invoice-preview,
+        #invoice-preview * {
+          visibility: visible !important;
+        }
+        #invoice-preview {
+          position: absolute !important;
+          top: 0;
+          left: 0;
+          width: 100% !important;
+          background: white !important;
+          z-index: 9999;
+          overflow: visible !important;
+          max-height: none !important;
+        }
+      }
+    `}</style>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-blue-800">发票管理</h1>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Left Column: Order List */}
-        <Card className="border border-blue-100">
+        <Card className="border border-blue-100 lg:col-span-3">
           <CardHeader className="bg-blue-50">
             <CardTitle className="text-blue-800">待生成发票订单</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="border border-blue-100 rounded-lg overflow-hidden">
-              <Table>
+              <Table className="w-full">
                 <TableHeader className="bg-blue-50">
                   <TableRow>
-                    <TableHead className="text-blue-800">订单编号</TableHead>
-                    <TableHead className="text-blue-800">客户名称</TableHead>
-                    <TableHead className="text-blue-800">订单金额</TableHead>
+                    <TableHead className="text-blue-800 min-w-28">订单编号</TableHead>
+                    <TableHead className="text-blue-800 min-w-28">客户名称</TableHead>
+                    <TableHead className="text-blue-800 min-w-28">订单金额</TableHead>
                     <TableHead className="text-blue-800">收货日期</TableHead>
                     <TableHead className="text-blue-800">状态</TableHead>
                     <TableHead className="text-right text-blue-800">操作</TableHead>
@@ -186,16 +246,16 @@ const InvoiceManagement = () => {
         </Card>
         
         {/* Right Column: Invoice Detail */}
-        <div className={!selectedOrder ? "hidden lg:block" : ""}>
-          <Card className="border border-blue-100 h-full">
+        <div id="invoice-preview" className={!selectedOrder ? "hidden lg:block lg:col-span-2" : "lg:col-span-2"}>
+          <Card className="border border-blue-100 h-full ">
             <CardHeader className="bg-blue-50">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-blue-800">
                   {invoiceData ? `发票详情 - ${invoiceData.invoiceId}` : '发票预览'}
                 </CardTitle>
                 {selectedOrder && (
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="icon"
                     className="lg:hidden"
                     onClick={() => setSelectedOrder(null)}
@@ -219,15 +279,43 @@ const InvoiceManagement = () => {
             {invoiceData && (
               <CardFooter className="bg-blue-50 border-t border-blue-100 py-3 justify-center">
                 <div className="flex space-x-3">
-                  <Button variant="outline" className="border-blue-300 text-blue-600">
-                    <Printer className="mr-2 h-4 w-4" /> 打印
-                  </Button>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Download className="mr-2 h-4 w-4" /> 下载PDF
-                  </Button>
+                      <Button 
+                        variant="outline" 
+                        className="border-blue-300 text-blue-600" 
+                        onClick={handlePrintClick}
+                      >
+                        <Printer className="mr-2 h-4 w-4" /> 打印
+                      </Button>
+
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() => handleExportPDFClick(selectedOrder.invoiceId)}
+                      >
+                        <Download className="mr-2 h-4 w-4" /> 下载PDF
+                      </Button>
                 </div>
+
               </CardFooter>
             )}
+            <AlertDialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen}>
+              <AlertDialogContent
+                className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto wide-dialog"
+                style={{ maxWidth: '95%', width: '95%', margin: '0 auto' }}
+              >
+                <AlertDialogHeader>
+                  <AlertDialogTitle>生成发票</AlertDialogTitle>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={() => setIsPrintDialogOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </AlertDialogHeader>
+                <GenerateInvoice deliveryOrderId={selectedOrder?.id} />
+              </AlertDialogContent>
+            </AlertDialog>
           </Card>
         </div>
       </div>

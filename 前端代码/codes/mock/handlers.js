@@ -33,4 +33,61 @@ export const handlers = [
     // 你可以在这里根据 req.url.searchParams 处理分页和筛选
     return res(ctx.status(200), ctx.json(ordersData));
   }),
+
+   rest.get('/api/orders/delivered', (req, res, ctx) => {
+    const data = Array.from({ length: 15 }, (_, i) => {
+      const hasInvoice = i > 5;
+      return {
+        id: `SO${3000 + i}`,
+        customerId: `C${1500 + (i % 10)}`,
+        customerName: `客户${1500 + (i % 10)}`,
+        amount: Math.floor(1000 + Math.random() * 9000),
+        orderDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        deliveryDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: '已收货',
+        hasInvoice,
+        invoiceId: hasInvoice ? `INV${Math.floor(10000 + Math.random() * 90000)}` : null
+      };
+    });
+
+    return res(ctx.status(200), ctx.json({ data }));
+  }),
+
+  // 生成发票
+  rest.post('/api/invoice/generate/:orderId', (req, res, ctx) => {
+    const { orderId } = req.params;
+
+    const invoice = {
+      invoiceId: `INV${Math.floor(10000 + Math.random() * 90000)}`,
+      orderId,
+      issueDate: new Date().toISOString(),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      taxRate: 0.13,
+      status: '待付款',
+      customer: {
+        id: `C${1500 + (parseInt(orderId.substring(2)) % 10)}`,
+        name: `客户${1500 + (parseInt(orderId.substring(2)) % 10)}`,
+        address: `地址${orderId}`,
+        taxId: `TAX${Math.floor(10000 + Math.random() * 90000)}`
+      },
+      items: [
+        {
+          id: `P${4000 + parseInt(orderId.substring(2))}`,
+          name: `商品${parseInt(orderId.substring(2)) + 1}`,
+          quantity: Math.floor(1 + Math.random() * 10),
+          unitPrice: Math.floor(100 + Math.random() * 500),
+          description: '标准商品'
+        },
+        {
+          id: `P${4001 + parseInt(orderId.substring(2))}`,
+          name: `商品${parseInt(orderId.substring(2)) + 2}`,
+          quantity: Math.floor(1 + Math.random() * 5),
+          unitPrice: Math.floor(200 + Math.random() * 800),
+          description: '高级商品'
+        }
+      ]
+    };
+
+    return res(ctx.status(200), ctx.json(invoice));
+  })
 ];
