@@ -9,8 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { X, Calendar, Calculator } from 'lucide-react';
 import { generateId } from '@/lib/utils';
-import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 
 // 表单验证规则
 const formSchema = z.object({
@@ -25,7 +23,6 @@ const formSchema = z.object({
   status: z.string().min(1, '请选择状态'),
   salesPerson: z.string().min(1, '销售人员不能为空'),
   remarks: z.string().optional(),
-  createdAt: z.string().optional(), // 新增创建时间字段
 });
 
 const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
@@ -42,7 +39,6 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
       status: '待付款',
       salesPerson: '销售员1',
       remarks: '',
-      createdAt: format(new Date(), 'yyyy-MM-dd', { locale: zhCN }) // 默认当前日期
     }
   });
 
@@ -50,7 +46,7 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
     // 如果是新增，生成订单ID
     if (!initialData) {
       data.id = 'SO' + generateId().substring(0, 5);
-      data.createdAt = format(new Date(), 'yyyy-MM-dd', { locale: zhCN });
+      data.createdAt = new Date().toISOString();
     } else {
       // 编辑时记录修改日志
       data.modifiedAt = new Date().toISOString();
@@ -146,27 +142,6 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
                   )}
                 />
               )}
-              
-              {/* 新增创建时间字段 */}
-              <FormField
-                control={form.control}
-                name="createdAt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center">
-                      创建时间
-                    </FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        readOnly
-                        className="bg-gray-100"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               
               <FormField
                 control={form.control}

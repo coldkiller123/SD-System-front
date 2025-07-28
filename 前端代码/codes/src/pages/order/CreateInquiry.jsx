@@ -66,7 +66,7 @@ const CreateInquiry = ({ onSuccess, onCancel }) => {
     const salesPerson = '管理员'; // 实际应用中应从登录信息获取
     
     const inquiryData = {
-      inquiryId, // 统一使用 inquiryId
+      id: inquiryId,
       ...data,
       salesPerson,
       status: '未报价',

@@ -2,7 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, ArrowLeft } from 'lucide-react';
+import { Edit, Printer, Share2, ArrowLeft } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 // 模拟API获取订单详情
@@ -83,15 +83,20 @@ const SalesOrderDetail = () => {
       
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-blue-800">销售订单详情 - {order.id}</h1>
-        {/* 删除“编辑订单”按钮 */}
-        {/* <div className="flex space-x-2">
+        <div className="flex space-x-2">
+          <Button variant="outline" className="border-blue-300 text-blue-600">
+            <Printer className="mr-2 h-4 w-4" /> 打印
+          </Button>
+          <Button variant="outline" className="border-blue-300 text-blue-600">
+            <Share2 className="mr-2 h-4 w-4" /> 分享
+          </Button>
           <Button 
             className="bg-blue-600 hover:bg-blue-700"
             onClick={() => window.location.href = `#/order/sales/edit/${order.id}`}
           >
             <Edit className="mr-2 h-4 w-4" /> 编辑订单
           </Button>
-        </div> */}
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -148,11 +153,6 @@ const SalesOrderDetail = () => {
                       </span>
                     </p>
                   </div>
-                  {/* 新增创建时间显示 */}
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">创建时间</label>
-                    <p className="mt-1">{formatDate(order.createdAt)}</p>
-                  </div>
                 </div>
               </div>
               
@@ -205,6 +205,40 @@ const SalesOrderDetail = () => {
                 <label className="text-sm font-medium text-gray-500">最后更新时间</label>
                 <p className="mt-1">{formatDate(order.history[0].timestamp)}</p>
               </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border border-blue-100 mt-6">
+            <CardHeader className="bg-blue-50">
+              <CardTitle>相关操作</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full border-blue-300 text-blue-600">
+                生成发票
+              </Button>
+              <Button variant="outline" className="w-full border-blue-300 text-blue-600">
+                导出订单详情
+              </Button>
+              {order.status === '待付款' && (
+                <Button className="w-full bg-green-600 hover:bg-green-700">
+                  标记为已付款
+                </Button>
+              )}
+              {order.status === '已付款' && (
+                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                  标记为已发货
+                </Button>
+              )}
+              {order.status === '已发货' && (
+                <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                  标记为已完成
+                </Button>
+              )}
+              {order.status !== '已取消' && (
+                <Button variant="destructive" className="w-full">
+                  取消订单
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>

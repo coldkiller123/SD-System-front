@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Plus, X, Upload, FileText } from 'lucide-react';
 import { validatePhone } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
+import { useState } from 'react'; // 新增
 
 // 表单验证规则
 const formSchema = z.object({
@@ -18,6 +19,8 @@ const formSchema = z.object({
   type: z.string().min(1, '请选择客户类型'),
   region: z.string().min(1, '请选择所在地区'),
   industry: z.string().min(1, '请选择所属行业'),
+  company: z.string().min(2, '公司名称至少2个字符').max(50, '公司名称最多50个字符'), //新增
+  phone: z.string().refine(validatePhone, '请输入有效的手机号码'), //新增
   creditRating: z.string().min(1, '请选择信用等级'),
   address: z.string().min(5, '详细地址至少5个字符'),
   contacts: z.array(z.object({
@@ -25,8 +28,9 @@ const formSchema = z.object({
     position: z.string().min(2, '职位至少2个字符'),
     phone: z.string().refine(validatePhone, '请输入有效的手机号码'),
     email: z.string().email('请输入有效的邮箱地址').optional(),
-    isPrimary: z.boolean()
+    // isPrimary: z.boolean()
   })).min(1, '至少需要一个联系人'),
+  remarks: z.string().max(200, '备注信息最多200个字符').optional(), //新增
   attachments: z.array(z.instanceof(File)).optional()
 });
 
@@ -38,11 +42,14 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
       type: '',
       region: '',
       industry: '',
+      company: '',
+      phone: '',
       creditRating: '',
       address: '',
       contacts: [
-        { name: '', position: '', phone: '', email: '', isPrimary: true }
+        { name: '', position: '', phone: '', email: '' }
       ],
+      remarks: '',
       attachments: []
     }
   });
@@ -52,15 +59,68 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
     name: 'contacts'
   });
 
-  const onSubmit = (data) => {
-    // 如果是新增，生成客户ID
-    if (!initialData) {
-      data.id = 'C' + generateId().substring(0, 5);
-    }
+  // const onSubmit = (data) => {
+  //   // 如果是新增，生成客户ID
+  //   if (!initialData) {
+  //     data.id = 'C' + generateId().substring(0, 5);
+  //   }
     
-    console.log('客户信息提交成功:', data);
-    onSuccess();
+  //   console.log('客户信息提交成功:', data);
+  //   onSuccess();
+  // };
+  const onSubmit = async (data) => {
+    try {
+      let response;
+
+      if (!initialData) {
+        // 新建客户：POST /customer/create
+        response = await fetch('/customer/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      } else {
+        // 修改客户：PUT /customer/update/:id
+        response = await fetch(`/customer/update/${data.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      }
+
+      const result = await response.json();
+      console.log(result.info, result.customer);
+      onSuccess();
+    } catch (error) {
+      console.error('提交失败:', error);
+    }
   };
+  // 新增
+  
+  const [contactOptions, setContactOptions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const handleContactSearch = async (keyword) => {
+    setSearchLoading(true);
+    try {
+      const res = await fetch(`/contacts/search?name=${encodeURIComponent(keyword)}`);
+      const json = await res.json();
+      setContactOptions(json.contacts || []);
+    } catch (err) {
+      console.error('联系人搜索失败:', err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleContactSelect = (index, contact) => {
+    form.setValue(`contacts.${index}.name`, contact.name);
+    form.setValue(`contacts.${index}.position`, contact.position);
+    form.setValue(`contacts.${index}.phone`, contact.phone);
+    form.setValue(`contacts.${index}.email`, contact.email);
+    setContactOptions([]);
+  };
+  // 联系人下拉框，新增
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -210,6 +270,40 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
               
               <FormField
                 control={form.control}
+                name="company"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center">
+                      客户所属公司 <span className="text-red-500 ml-1">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="请输入公司名称" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />              
+              {/* 新增 */}
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center">
+                      联系电话 <span className="text-red-500 ml-1">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="请输入联系电话" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* 新增 */}
+
+              <FormField
+                control={form.control}
                 name="creditRating"
                 render={({ field }) => (
                   <FormItem>
@@ -250,6 +344,23 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="remarks"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel className="flex items-center">
+                      备注
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="请输入备注信息" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* 新增 */}
             </div>
             
             <div className="border-t border-gray-200 pt-6">
@@ -257,7 +368,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
               
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 border rounded-lg bg-blue-50">
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name={`contacts.${index}.name`}
                     render={({ field }) => (
@@ -271,7 +382,52 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         <FormMessage />
                       </FormItem>
                     )}
+                  /> */}
+                  <FormField
+                    control={form.control}
+                    name={`contacts.${index}.name`}
+                    render={({ field }) => (
+                      <FormItem className="relative">
+                        <FormLabel className="flex items-center">
+                          姓名 <span className="text-red-500 ml-1">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <div>
+                            <Input
+                              placeholder="请输入联系人姓名"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e); // 更新表单值
+                                handleContactSearch(e.target.value); // 发起搜索
+                              }}
+                              autoComplete="off"
+                            />
+                            {searchLoading ? (
+                              <div className="absolute z-10 bg-white border rounded shadow mt-1 w-full px-3 py-2 text-gray-400">
+                                加载中...
+                              </div>
+                            ) : (
+                              contactOptions.length > 0 && (
+                                <div className="absolute z-10 bg-white border rounded shadow mt-1 w-full max-h-48 overflow-y-auto">
+                                  {contactOptions.map((contact) => (
+                                    <div
+                                      key={contact.id}
+                                      className="px-3 py-2 hover:bg-blue-100 cursor-pointer"
+                                      onClick={() => handleContactSelect(index, contact)}
+                                    >
+                                      {contact.name}（{contact.position}）
+                                    </div>
+                                  ))}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
+                  {/* 新增 */}
                   
                   <FormField
                     control={form.control}
@@ -320,7 +476,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                   />
                   
                   <div className="md:col-span-4 flex items-center justify-between">
-                    <FormField
+                    {/* <FormField
                       control={form.control}
                       name={`contacts.${index}.isPrimary`}
                       render={({ field }) => (
@@ -336,7 +492,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                           <FormLabel className="!mt-0">主要联系人</FormLabel>
                         </FormItem>
                       )}
-                    />
+                    /> */}
                     
                     <Button 
                       type="button" 

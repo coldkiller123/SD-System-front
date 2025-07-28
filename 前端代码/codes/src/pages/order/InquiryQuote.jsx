@@ -17,7 +17,7 @@ const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
   
   // 模拟数据
   const allInquiries = Array.from({ length: 45 }, (_, i) => ({
-    inquiryId: `IQ${1000 + i}`, // 统一使用 inquiryId
+    id: `IQ${1000 + i}`,
     customerId: `C${1500 + (i % 20)}`,
     customerName: `客户${1500 + (i % 20)}`,
     productName: `商品${i + 1}`,
@@ -33,7 +33,7 @@ const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
   // 应用筛选
   let filtered = allInquiries;
   if (filters.inquiryId) {
-    filtered = filtered.filter(i => i.inquiryId.includes(filters.inquiryId));
+    filtered = filtered.filter(i => i.id.includes(filters.inquiryId));
   }
   if (filters.customerName) {
     filtered = filtered.filter(i => i.customerName.includes(filters.customerName));
@@ -161,8 +161,8 @@ const InquiryQuote = () => {
               </TableHeader>
               <TableBody>
                 {data.inquiries.map((inquiry) => (
-                  <TableRow key={inquiry.inquiryId} className="hover:bg-blue-50">
-                    <TableCell className="font-medium">{inquiry.inquiryId}</TableCell>
+                  <TableRow key={inquiry.id} className="hover:bg-blue-50">
+                    <TableCell className="font-medium">{inquiry.id}</TableCell>
                     <TableCell>{inquiry.customerName}</TableCell>
                     <TableCell>{inquiry.productName}</TableCell>
                     <TableCell>{inquiry.quantity} {inquiry.unit}</TableCell>
@@ -180,7 +180,7 @@ const InquiryQuote = () => {
                         <Button 
                           size="sm" 
                           className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleUpdateStatus(inquiry.inquiryId, '已报价')}
+                          onClick={() => handleUpdateStatus(inquiry.id, '已报价')}
                         >
                           <CheckCircle className="mr-1 h-4 w-4" /> 标记为已报价
                         </Button>
