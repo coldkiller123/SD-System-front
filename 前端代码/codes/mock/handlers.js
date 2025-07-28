@@ -100,24 +100,58 @@ export const handlers = [
     return res(ctx.status(200), ctx.json(ordersData));
   }),
 
-   rest.get('/api/orders/delivered', (req, res, ctx) => {
-    const data = Array.from({ length: 15 }, (_, i) => {
-      const hasInvoice = i > 5;
-      return {
-        id: `SO${3000 + i}`,
-        customerId: `C${1500 + (i % 10)}`,
-        customerName: `客户${1500 + (i % 10)}`,
-        amount: Math.floor(1000 + Math.random() * 9000),
-        orderDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-        deliveryDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: '已收货',
-        hasInvoice,
-        invoiceId: hasInvoice ? `INV${Math.floor(10000 + Math.random() * 90000)}` : null
-      };
-    });
+  rest.get('/api/orders/delivered', (req, res, ctx) => {
+  const allData = Array.from({ length: 45 }, (_, i) => {
+    const hasInvoice = i > 5;
+    return {
+      id: `SO${3000 + i}`,
+      customerId: `C${1500 + (i % 10)}`,
+      customerName: `客户${1500 + (i % 10)}`,
+      amount: Math.floor(1000 + Math.random() * 9000),
+      orderDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      deliveryDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+      status: '已收货',
+      hasInvoice,
+      invoiceId: hasInvoice ? `INV${Math.floor(10000 + Math.random() * 90000)}` : null
+    };
+  });
 
-    return res(ctx.status(200), ctx.json({ data }));
-  }),
+  // 获取查询参数
+  const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
+  const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
+  const orderId = req.url.searchParams.get('orderId')?.trim();
+  const status = req.url.searchParams.get('status') || 'all'; // invoiced | pending | all
+
+  // 多重过滤
+  let filteredData = allData;
+
+  if (orderId) {
+    filteredData = filteredData.filter(order =>
+      order.id.toLowerCase().includes(orderId.toLowerCase())
+    );
+  }
+
+  if (status === 'invoiced') {
+    filteredData = filteredData.filter(order => order.hasInvoice);
+  } else if (status === 'pending') {
+    filteredData = filteredData.filter(order => !order.hasInvoice);
+  }
+
+  // 分页处理
+  const start = pageIndex * pageSize;
+  const end = start + pageSize;
+  const pageData = filteredData.slice(start, end);
+
+  return res(
+    ctx.status(200),
+    ctx.json({
+      data: pageData,
+      total: filteredData.length,
+      pageCount: Math.ceil(filteredData.length / pageSize),
+    })
+  );
+}),
+
 
   // 生成发票
   rest.post('/api/invoice/generate/:orderId', (req, res, ctx) => {
