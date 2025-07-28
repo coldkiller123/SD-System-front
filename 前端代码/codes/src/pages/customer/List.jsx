@@ -12,46 +12,64 @@ import { formatDate } from '@/lib/utils';
 import CustomerForm from './Form.jsx';
 
 // 模拟API获取客户数据
+// const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
+//   // 模拟API延迟
+//   await new Promise(resolve => setTimeout(resolve, 500));
+  
+//   // 模拟数据
+//   const allCustomers = Array.from({ length: 85 }, (_, i) => ({
+//     id: `C${1000 + i}`,
+//     name: `客户${i + 1}`,
+//     region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
+//     industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
+//     contact: `联系人${i + 1}`,
+//     phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
+//     // address: `地址${i + 1}`,
+//     // 新增
+//     company: `公司${i + 1}`,
+//     creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
+//     // createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString()
+//   }));
+
+//   // 应用筛选
+//   let filtered = allCustomers;
+//   if (filters.name) {
+//     filtered = filtered.filter(c => c.name.includes(filters.name));
+//   }
+//   if (filters.region && filters.region !== 'all') {
+//     filtered = filtered.filter(c => c.region === filters.region);
+//   }
+//   if (filters.industry && filters.industry !== 'all') {
+//     filtered = filtered.filter(c => c.industry === filters.industry);
+//   }
+
+//   // 分页
+//   const start = pageIndex * pageSize;
+//   const end = start + pageSize;
+//   const pageCount = Math.ceil(filtered.length / pageSize);
+  
+//   return {
+//     customers: filtered.slice(start, end),
+//     total: filtered.length,
+//     pageCount
+//   };
+// };
+
 const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // 模拟数据
-  const allCustomers = Array.from({ length: 85 }, (_, i) => ({
-    id: `C${1000 + i}`,
-    name: `客户${i + 1}`,
-    region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
-    industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
-    contact: `联系人${i + 1}`,
-    phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
-    address: `地址${i + 1}`,
-    creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
-    createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString()
-  }));
+  const queryParams = new URLSearchParams({
+    pageIndex: String(pageIndex),
+    pageSize: String(pageSize),
+    name: filters.name || '',
+    region: filters.region || '',
+    industry: filters.industry || ''
+  });
 
-  // 应用筛选
-  let filtered = allCustomers;
-  if (filters.name) {
-    filtered = filtered.filter(c => c.name.includes(filters.name));
-  }
-  if (filters.region && filters.region !== 'all') {
-    filtered = filtered.filter(c => c.region === filters.region);
-  }
-  if (filters.industry && filters.industry !== 'all') {
-    filtered = filtered.filter(c => c.industry === filters.industry);
-  }
-
-  // 分页
-  const start = pageIndex * pageSize;
-  const end = start + pageSize;
-  const pageCount = Math.ceil(filtered.length / pageSize);
-  
-  return {
-    customers: filtered.slice(start, end),
-    total: filtered.length,
-    pageCount
-  };
+  const res = await fetch(`/api/customer/list?${queryParams}`);
+  const json = await res.json();
+  return json.data;
 };
+// 测试！fetchCustomers只负责请求和获取数据，筛选和分页参数会通过URL传递给后端，由后端返回已经筛选和分页好的数据。
+
 
 const CustomerList = () => {
   const [pageIndex, setPageIndex] = useState(0);
@@ -165,11 +183,12 @@ const CustomerList = () => {
                   <TableHead className="text-blue-800">客户名称</TableHead>
                   <TableHead className="text-blue-800">所在地区</TableHead>
                   <TableHead className="text-blue-800">所属行业</TableHead>
-                  <TableHead className="text-blue-800">主要联系人</TableHead>
+                  <TableHead className="text-blue-800 w-[100px]">所属公司</TableHead>
                   <TableHead className="text-blue-800">联系电话</TableHead>
+                  <TableHead className="text-blue-800">联系人</TableHead>
                   <TableHead className="text-blue-800">信用等级</TableHead>
-                  <TableHead className="text-blue-800">创建时间</TableHead>
-                  <TableHead className="text-right text-blue-800">操作</TableHead>
+                  {/* <TableHead className="text-blue-800">创建时间</TableHead> */}
+                  <TableHead className="text-blue-800 pl-6">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -179,8 +198,10 @@ const CustomerList = () => {
                     <TableCell>{customer.name}</TableCell>
                     <TableCell>{customer.region}</TableCell>
                     <TableCell>{customer.industry}</TableCell>
-                    <TableCell>{customer.contact}</TableCell>
+                    <TableCell>{customer.company}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
+                    <TableCell>{customer.contact || customer.contacts?.[0]?.name || '—'}</TableCell>
+                    {/* 返回联系人下拉框数组中的姓名 */}
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         customer.creditRating === 'AAA' ? 'bg-green-100 text-green-800' :
@@ -191,7 +212,7 @@ const CustomerList = () => {
                         {customer.creditRating}
                       </span>
                     </TableCell>
-                    <TableCell>{formatDate(customer.createdAt)}</TableCell>
+                    {/* <TableCell>{formatDate(customer.createdAt)}</TableCell> */}
                     <TableCell className="text-right">
                       <Button 
                         variant="ghost" 
@@ -217,7 +238,7 @@ const CustomerList = () => {
           </div>
           
           <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 whitespace-nowrap">
               显示 {pageIndex * pageSize + 1} - {Math.min((pageIndex + 1) * pageSize, data.total)} 条，共 {data.total} 条记录
             </div>
             

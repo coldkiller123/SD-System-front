@@ -7,43 +7,58 @@ import { Edit, Trash2, Printer, Share2, ArrowLeft } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 // 模拟API获取客户详情
-const fetchCustomerDetail = async (id) => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
+// const fetchCustomerDetail = async (id) => {
+//   // 模拟API延迟
+//   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // 模拟数据
-  return {
-    id,
-    name: `客户${id.substring(1)}`,
-    type: ['普通客户', 'VIP客户', '战略客户'][id.charCodeAt(1) % 3],
-    region: ['华东', '华北', '华南', '华中', '西南'][id.charCodeAt(1) % 5],
-    industry: ['制造业', '零售业', '金融业', '互联网', '教育'][id.charCodeAt(1) % 5],
-    creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][id.charCodeAt(1) % 5],
-    address: `地址${id.substring(1)}`,
-    createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
-    contacts: Array.from({ length: 3 }, (_, i) => ({
-      id: `CT${1000 + i}`,
-      name: `联系人${i + 1}`,
-      position: ['销售经理', '采购主管', '财务总监'][i],
-      phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
-      email: `contact${i + 1}@company.com`,
-      isPrimary: i === 0
-    })),
-    businessHistory: Array.from({ length: 12 }, (_, i) => ({
-      id: `TR${1000 + i}`,
-      date: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
-      amount: Math.floor(10000 + Math.random() * 90000),
-      product: `产品${i + 1}`,
-      status: ['已完成', '进行中', '已取消'][i % 3]
-    }))
-  };
+//   // 模拟数据
+//   return {
+//     id,
+//     name: `客户${id.substring(1)}`,
+//     type: ['普通客户', 'VIP客户', '战略客户'][id.charCodeAt(1) % 3],
+//     region: ['华东', '华北', '华南', '华中', '西南'][id.charCodeAt(1) % 5],
+//     industry: ['制造业', '零售业', '金融业', '互联网', '教育'][id.charCodeAt(1) % 5],
+//     company: `公司${id.substring(1)}`, // 新增
+//     phone: `021-${Math.floor(10000000 + Math.random() * 90000000)}`, // 新增
+//     creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][id.charCodeAt(1) % 5],
+//     address: `地址${id.substring(1)}`,
+//     createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
+//     modifiedAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(), //新增
+//     modifiedBy: `用户${id.substring(1)}`, //新增 与登录用户名一致
+//     contacts: Array.from({ length: 3 }, (_, i) => ({
+//       id: `CT${1000 + i}`,
+//       name: `联系人${i + 1}`,
+//       position: ['销售经理', '采购主管', '财务总监'][i],
+//       phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
+//       email: `contact${i + 1}@company.com`,
+//       // isPrimary: i === 0
+//     })),
+//     remarks: `这是客户${id.substring(1)}的备注信息。`, //新增
+//     businessHistory: Array.from({ length: 12 }, (_, i) => ({
+//       id: `TR${1000 + i}`,
+//       date: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
+//       amount: Math.floor(10000 + Math.random() * 90000),
+//       product: `产品${i + 1}`,
+//       status: ['已完成', '进行中', '已取消'][i % 3]
+//     }))
+//   };
+// };
+
+const fetchCustomerDetail = async (id) => {
+  console.log('请求客户详情，ID =', id); // 调试信息
+  const res = await fetch(`/api/customer/detail/${id}`);
+  if (!res.ok) throw new Error('请求失败'); // 处理请求错误
+  const json = await res.json();
+  return json.info;
 };
+// 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
 
 const CustomerDetail = () => {
   const { id } = useParams();
   const { data: customer, isLoading, isError } = useQuery({
     queryKey: ['customer', id],
-    queryFn: () => fetchCustomerDetail(id)
+    queryFn: () => fetchCustomerDetail(id),
+    enabled: !!id  // 新增！只有在 id 不为空时才执行
   });
 
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
@@ -65,27 +80,27 @@ const CustomerDetail = () => {
       
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-blue-800">{customer.name} - 客户详情</h1>
-        <div className="flex space-x-2">
+        {/* <div className="flex space-x-2">
           <Button variant="outline" className="border-blue-300 text-blue-600">
-            <Printer className="mr-2 h-4 w-4" /> 打印
-          </Button>
+            <Printer className="mr-2 h-4 w-4" /> 打印 
+          </Button> // 删掉
           <Button variant="outline" className="border-blue-300 text-blue-600">
             <Share2 className="mr-2 h-4 w-4" /> 分享
-          </Button>
+          </Button> // 删掉
           <Button 
             className="bg-blue-600 hover:bg-blue-700"
             onClick={() => window.location.href = `#/customer/new?edit=${customer.id}`}
           >
             <Edit className="mr-2 h-4 w-4" /> 编辑信息
-          </Button>
-        </div>
+          </Button> // 删掉
+        </div> */}
       </div>
       
       <Tabs defaultValue="basic" className="w-full">
         <TabsList className="grid grid-cols-3 w-full max-w-md bg-blue-50">
           <TabsTrigger value="basic" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">基础信息</TabsTrigger>
           <TabsTrigger value="contacts" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">联系人</TabsTrigger>
-          <TabsTrigger value="business" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">业务关系</TabsTrigger>
+          <TabsTrigger value="business" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">业务关系</TabsTrigger> 
         </TabsList>
         
         <TabsContent value="basic">
@@ -109,6 +124,11 @@ const CustomerDetail = () => {
                     <p className="mt-1">{customer.region}</p>
                   </div>
                   <div>
+                    <label className="text-sm font-medium text-gray-500">所在公司</label>
+                    <p className="mt-1">{customer.company}</p>
+                  </div>
+                  {/* 新增 */}
+                  <div>
                     <label className="text-sm font-medium text-gray-500">详细地址</label>
                     <p className="mt-1">{customer.address}</p>
                   </div>
@@ -119,6 +139,11 @@ const CustomerDetail = () => {
                     <label className="text-sm font-medium text-gray-500">所属行业</label>
                     <p className="mt-1">{customer.industry}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">联系电话</label>
+                    <p className="mt-1">{customer.phone}</p>
+                  </div> 
+                  {/* 新增 */}
                   <div>
                     <label className="text-sm font-medium text-gray-500">信用等级</label>
                     <p className="mt-1">
@@ -137,9 +162,18 @@ const CustomerDetail = () => {
                     <p className="mt-1">{formatDate(customer.createdAt)}</p>
                   </div>
                   <div>
+                    <label className="text-sm font-medium text-gray-500">备注信息</label>
+                    <p className="mt-1">{customer.remarks}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">修改时间及修改人</label>
+                    <p className="mt-1">{formatDate(customer.modifiedAt)}，{customer.modifiedBy}</p>
+                  </div>
+                  {/* 新增 */}
+                  {/* <div>
                     <label className="text-sm font-medium text-gray-500">最后更新时间</label>
                     <p className="mt-1">{formatDate(customer.createdAt)}</p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </CardContent>
@@ -151,50 +185,55 @@ const CustomerDetail = () => {
             <CardHeader className="bg-blue-50">
               <CardTitle className="flex items-center justify-between">
                 <span>联系人信息</span>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                {/* <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                   添加联系人
-                </Button>
+                </Button> */}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {customer.contacts.map(contact => (
-                  <Card key={contact.id} className="border border-blue-100">
+              {/* contact.全改成customer.contacts[0]. */}
+              <div className="grid grid-cols-1 gap-4">
+                {customer.contacts.length > 0 && (
+                  <Card key={customer.contacts[0].id} className="border border-blue-100">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle>{contact.name}</CardTitle>
-                        {contact.isPrimary && (
+                        <CardTitle>{customer.contacts[0].name}</CardTitle>
+                        {/* {contact.isPrimary && (
                           <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                             主要联系人
                           </span>
-                        )}
+                        )} */}
                       </div>
-                      <p className="text-sm text-gray-500">{contact.position}</p>
+                      <p className="text-sm text-gray-500">{customer.contacts[0].position}</p>
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div>
                         <label className="text-sm font-medium text-gray-500">手机号码</label>
-                        <p className="mt-1">{contact.phone}</p>
+                        <p className="mt-1">{customer.contacts[0].phone}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-gray-500">电子邮箱</label>
-                        <p className="mt-1">{contact.email}</p>
+                        <p className="mt-1">{customer.contacts[0].email}</p>
                       </div>
                       <div className="flex space-x-2 pt-2">
-                        <Button variant="outline" size="sm" className="border-blue-300 text-blue-600">编辑</Button>
-                        <Button variant="destructive" size="sm">
-                          <Trash2 className="h-4 w-4 mr-1" /> 删除
+                        <Button variant="outline" size="sm" className="border-blue-300 text-blue-600">
+                          <Link to="/customer/list">编辑
+                          </Link>
+                          {/* 新增 */}
                         </Button>
+                        {/* <Button variant="destructive" size="sm">
+                          <Trash2 className="h-4 w-4 mr-1" /> 删除
+                        </Button> */}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="business">
+        {/* <TabsContent value="business">
           <Card className="border border-blue-100">
             <CardHeader className="bg-blue-50">
               <CardTitle>业务关系</CardTitle>
@@ -253,7 +292,7 @@ const CustomerDetail = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );
