@@ -176,6 +176,116 @@ export const handlers = [
     );
   }),
 
+  // 3. 获取已发货及已完成的订单
+  rest.get('/api/orders/inprocess', (req, res, ctx) => {
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '0');
+    const pageSize = parseInt(url.searchParams.get('page_size') || '10');
+    const search = url.searchParams.get('search') || '';
+    const statuses = url.searchParams.get('status') || '已发货,已完成';
+
+    // 固定总订单数
+    const totalOrders = 85;
+    
+    // 计算当前页实际应返回的数据量
+    const startIndex = page * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalOrders);
+    const currentPageSize = endIndex - startIndex;
+
+    // 生成当前页数据
+    let orders = Array.from({ length: currentPageSize }, (_, i) => {
+      const globalIndex = startIndex + i;
+      const orderId = `SO${5000 + globalIndex}`;
+      const deliveryOrderId = `DO${7000 + globalIndex}`;
+      const customerId = `C${2000 + (globalIndex % 15)}`;
+      
+      // 随机生成状态：60%已发货，40%已完成
+      const status = Math.random() > 0.4 ? '已发货' : '已完成';
+      
+      return {
+        id: orderId,
+        deliveryOrderId,
+        customerId,
+        customerName: `客户${customerId.substring(1)}`,
+        productName: `商品${Math.floor(Math.random() * 50)}`,
+        quantity: Math.floor(1 + Math.random() * 20),
+        createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
+        totalAmount: Math.floor(500 + Math.random() * 5000),
+        status
+      };
+    });
+
+    // 额外加入一个发货单号，包含两个订单号及其数据
+    // 这两个订单号为 SO99901, SO99902，发货单号为 DO88888
+    const extraDeliveryOrderId = 'DO88888';
+    const extraOrders = [
+      {
+        id: 'SO99901',
+        deliveryOrderId: extraDeliveryOrderId,
+        customerId: 'C3001',
+        customerName: '客户3001',
+        productName: '商品特供A',
+        quantity: 5,
+        createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        totalAmount: 1888,
+        status: '已发货'
+      },
+      {
+        id: 'SO99902',
+        deliveryOrderId: extraDeliveryOrderId,
+        customerId: 'C3002',
+        customerName: '客户3002',
+        productName: '商品特供B',
+        quantity: 8,
+        createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+        totalAmount: 2666,
+        status: '已完成'
+      }
+    ];
+
+    // 将这两个订单插入到 orders 的最前面
+    orders = [...extraOrders, ...orders];
+
+    // 应用搜索过滤
+    const filteredOrders = orders.filter(order => {
+      const searchLower = search.toLowerCase();
+      return (
+        order.id.toLowerCase().includes(searchLower) ||
+        (order.deliveryOrderId && order.deliveryOrderId.toLowerCase().includes(searchLower)) ||
+        order.customerName.toLowerCase().includes(searchLower)
+      );
+    });
+
+    return res(
+      ctx.status(200),
+      ctx.json({
+        code: 200,
+        message: "成功",
+        data: {
+          total: totalOrders + 2, // 总数加上额外的2个订单
+          page,
+          page_size: pageSize,
+          orders: filteredOrders
+        }
+      })
+    );
+  }),
+
+  // 4. 修改订单状态
+  rest.put('/api/orders/:orderId/status', async (req, res, ctx) => {
+    const { orderId } = req.params;
+    const { status } = await req.json();
+    
+    return res(
+      ctx.status(200),
+      ctx.delay(500), // 模拟网络延迟
+      ctx.json({
+        code: 200,
+        message: `订单 ${orderId} 状态已更新为 ${status}`
+      })
+    );
+  }),
+
   // ============= 原有接口 =============
     // SalesOrderForm接口模拟-新建销售订单
   rest.post('/api/orders', async (req, res, ctx) => {
