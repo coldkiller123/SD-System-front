@@ -82,6 +82,7 @@ export const handlers = [
 
     return res(ctx.status(200), ctx.json({ data: { total: filtered.length, pageCount, customers } }));
   }),
+
   // 2. 客户详情
   rest.get('/api/customer/detail/:id', (req, res, ctx) => {
     const { id } = req.params;
@@ -91,41 +92,20 @@ export const handlers = [
     }
     return res(ctx.status(200), ctx.json({ info: customer }));
   }),
+
   // 3. 新增客户
   rest.post('/api/customer/create', async (req, res, ctx) => {
     console.log('[mock] /api/customer/create 收到请求');
-    // // const newCustomer = await req.json();
-    // const buffer = await req.arrayBuffer();
-    // const jsonStr = new TextDecoder().decode(buffer);
-    // const newCustomer = JSON.parse(jsonStr);
-    // newCustomer.id = `C${Math.floor(1000 + Math.random() * 1000)}`;
-    // customerData.unshift(newCustomer);
-    // return res(ctx.status(200), ctx.json({ info: '客户信息创建成功', customer: newCustomer }));
-    try {
-      const buffer = await req.arrayBuffer();
-      const jsonStr = new TextDecoder().decode(buffer);
-      console.log('[debug] jsonStr:', jsonStr); // 👈 打印原始请求体
-      const newCustomer = JSON.parse(jsonStr);
-
-      newCustomer.id = `C${Math.floor(1000 + Math.random() * 1000)}`;
-      customerData.unshift(newCustomer);
-
-      return res(
-        ctx.status(200),
-        ctx.json({ info: '客户信息创建成功', customer: newCustomer })
-      );
-    } catch (e) {
-      console.error('[mock create error]', e); // 👈 捕获错误
-      return res(ctx.status(500), ctx.json({ info: 'Mock 创建客户失败', error: e.message }));
-    }
+    const newCustomer = await req.json();
+    newCustomer.id = `C${Math.floor(1000 + Math.random() * 1000)}`;
+    customerData.unshift(newCustomer);
+    return res(ctx.status(200), ctx.json({ info: '客户信息创建成功', customer: newCustomer }));
   }),
+
   // 4. 修改客户
   rest.put('/api/customer/update/:id', async (req, res, ctx) => {
     const { id } = req.params;
-    // const updatedCustomer = await req.json();
-    const buffer = await req.arrayBuffer();
-    const jsonStr = new TextDecoder().decode(buffer);
-    const updatedCustomer = JSON.parse(jsonStr);
+    const updatedCustomer = await req.json();
     const index = customerData.findIndex(c => c.id === id);
     if (index === -1) {
       return res(ctx.status(404), ctx.json({ info: '未找到客户' }));
@@ -133,6 +113,7 @@ export const handlers = [
     customerData[index] = { ...customerData[index], ...updatedCustomer };
     return res(ctx.status(200), ctx.json({ info: '客户信息修改成功', customer: customerData[index] }));
   }),
+
   // 5. 联系人搜索
   rest.get('/api/contacts/search', (req, res, ctx) => {
     const keyword = new URL(req.url).searchParams.get('name') || '';
