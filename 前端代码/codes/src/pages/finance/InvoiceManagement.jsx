@@ -469,6 +469,7 @@ import GenerateInvoice from "./GenerateInvoice";
 import InvoicePreview from '@/components/invoice/InvoicePreview';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
+import { Search } from "lucide-react"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { X } from "lucide-react";
 import { toPng } from 'html-to-image';
@@ -640,26 +641,27 @@ const InvoiceManagement = () => {
         <Card className="border border-blue-100 lg:col-span-3">
           <CardHeader className="bg-blue-50">
             <CardTitle className="text-blue-800">待生成发票订单</CardTitle>
-
-            {/* 搜索和筛选区域 */}
-            <div className="flex space-x-2 mb-4">
-              <Input
-                type="text"
-                placeholder="搜索订单编号"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="选择状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部</SelectItem>
-                  <SelectItem value="invoiced">已开票</SelectItem>
-                  <SelectItem value="pending">待开票</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* 搜索框 */}
+            <div className="relative md:col-span-2 flex items-center">
+    <span className="absolute left-3">
+        <Search className="h-4 w-4 text-gray-400" />
+    </span>
+    <Input
+        placeholder="搜索订单号、客户名称或商品名称..."
+        className="pl-10 h-12" // 保持左侧内边距
+        value={searchTerm}
+        // 搜索框相关：每输入一个字就会触发 setSearchTerm，进而自动搜索
+        onChange={(e) => setSearchTerm(e.target.value)}
+    />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="pl-6 h-11 rounded"
+              >
+                <option value="all">全部</option>
+                <option value="invoiced">已开票</option>
+                <option value="pending">待开票</option>
+              </select>
             </div>
           </CardHeader>
           <CardContent>

@@ -2,6 +2,11 @@ import { rest } from 'msw';
 import ordersData from './orders.json';
 import inquiriesData from './inquiries.json';
 
+
+function formatMinutesAgo(minutes) {
+  return `${minutes}分钟前`;
+}
+
 // ===== 客户管理数据源 =====
 const allContacts = [
   { id: 'CT1', name: '张三', position: '经理', phone: '13811112222', email: 'zhangsan@example.com' },
@@ -30,6 +35,7 @@ let customerData = Array.from({ length: 45 }, (_, i) => {
     attachments: []
   };
 });
+
 
 export const handlers = [
   // ============= 客户管理接口 =============
@@ -388,5 +394,69 @@ export const handlers = [
     };
 
     return res(ctx.status(200), ctx.json(invoice));
+  }),
+    rest.get('/api/activities/latest', (req, res, ctx) => {
+    const now = new Date();
+    const data={
+    activities:[
+      {
+        title: '新客户注册',
+        description: `上海科技有限公司 - ${formatMinutesAgo(2)}`,
+        module: '客户管理',
+        color: 'blue',
+      },
+      {
+        title: '新订单创建',
+        description: `订单号：SO20241215001 - ${formatMinutesAgo(5)}`,
+        module: '销售订单',
+        color: 'green',
+      },
+      {
+        title: '发货单生成',
+        description: `发货单号：DO20241215008 - ${formatMinutesAgo(10)}`,
+        module: '发货管理',
+        color: 'purple',
+      },
+      {
+        title: '发票开具',
+        description: `发票号：INV20241215012 - ${formatMinutesAgo(15)}`,
+        module: '财务管理',
+        color: 'orange',
+      },
+    ],
+
+   stats:[
+  {
+    title: '客户总数',
+    value: '1,248',
+    icon: 'Users', // ✅ 改为字符串
+    todayNew: '+12 今日新增',
+    color: 'blue',
+  },
+  {
+    title: '订单总数',
+    value: '3,567',
+    icon: 'FileText',
+    todayNew: '+45 今日新增',
+    color: 'green',
+  },
+  {
+    title: '发货单总数',
+    value: '2,891',
+    icon: 'Package',
+    todayNew: '+28 今日新增',
+    color: 'purple',
+  },
+  {
+    title: '发票总数',
+    value: '2,456',
+    icon: 'Receipt',
+    todayNew: '+32 今日新增',
+    color: 'orange',
+  }
+   ]
+}
+    return res(ctx.status(200), ctx.json(data));
   })
 ];
+
