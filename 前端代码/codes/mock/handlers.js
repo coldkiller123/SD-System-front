@@ -2,6 +2,36 @@ import { rest } from 'msw';
 import ordersData from './orders.json';
 import inquiriesData from './inquiries.json';
 
+
+// ===== 客户管理数据源 =====
+const allContacts = [
+  { id: 'CT1', name: '张三', position: '经理', phone: '13811112222', email: 'zhangsan@example.com' },
+  { id: 'CT2', name: '张伟', position: '主任', phone: '13822223333', email: 'zhangwei@example.com' },
+  { id: 'CT3', name: '李四', position: '主管', phone: '13911112222', email: 'lisi@example.com' },
+  { id: 'CT4', name: '王五', position: '工程师', phone: '13711112222', email: 'wangwu@example.com' }
+];
+
+let customerData = Array.from({ length: 45 }, (_, i) => {
+  const id = `C${1000 + i}`;
+  return {
+    id,
+    name: `客户${i + 1}`,
+    region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
+    industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
+    company: `公司${i + 1}`,
+    phone: `138${10000000 + i}`,
+    contact: allContacts[i % allContacts.length].name,
+    creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
+    address: `地址${i + 1}`,
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
+    modifiedBy: `用户${i + 1}`,
+    contacts: [allContacts[i % allContacts.length]],
+    remarks: `这是客户${i + 1}的备注信息`,
+    attachments: []
+  };
+});
+
 function formatMinutesAgo(minutes) {
   return `${minutes}分钟前`;
 }
