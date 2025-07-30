@@ -10,41 +10,85 @@ import { Search, Plus, Filter, Download, Eye, Pencil } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import SalesOrderForm from './SalesOrderForm.jsx';
 
-// 获取销售订单数据（通过接口）
-const fetchSalesOrders = async ({ pageIndex, pageSize, filters }) => {
-  const params = new URLSearchParams();
-  if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
-  if (pageSize !== undefined) params.append('pageSize', pageSize);
-  if (filters.orderId) params.append('orderId', filters.orderId);
-  if (filters.customerName) params.append('customerName', filters.customerName);
-  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+// // 获取销售订单数据（通过接口）
+// const fetchSalesOrders = async ({ pageIndex, pageSize, filters }) => {
+//   const params = new URLSearchParams();
+//   if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
+//   if (pageSize !== undefined) params.append('pageSize', pageSize);
+//   if (filters.orderId) params.append('orderId', filters.orderId);
+//   if (filters.customerName) params.append('customerName', filters.customerName);
+//   if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
-  const res = await fetch(`/api/orders?${params.toString()}`);
-  if (!res.ok) throw new Error('网络错误');
-  return await res.json();
-  console.log(res)
-};
+//   const res = await fetch(`/api/orders?${params.toString()}`);
+//   if (!res.ok) throw new Error('网络错误');
+//   return await res.json();
+//   console.log(res)
+// };
+
+// const SalesOrderList = () => {
+//   const [pageIndex, setPageIndex] = useState(0);
+//   const [filters, setFilters] = useState({
+//     orderId: '',
+//     customerName: '',
+//     status: ''
+//   });
+//   const [isFormOpen, setIsFormOpen] = useState(false);
+//   const [editingOrder, setEditingOrder] = useState(null);
+
+//   const pageSize = 10;
+
+//   const { data, isLoading, isError, refetch } = useQuery({
+//     queryKey: ['salesOrders', pageIndex, filters],
+//     queryFn: () => fetchSalesOrders({ pageIndex, pageSize, filters })
+//   });
+
+//   const handleFilterChange = (key, value) => {
+//     setFilters(prev => ({ ...prev, [key]: value }));
+//     setPageIndex(0);
+//   };
+
+//   const handleEdit = (order) => {
+//     setEditingOrder(order);
+//     setIsFormOpen(true);
+//   };
+
+//   const handleFormSuccess = () => {
+//     setIsFormOpen(false);
+//     setEditingOrder(null);
+//     refetch();
+//   };
+
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+// 导入封装的接口
+import { getOrders } from '@/apis/main';
 
 const SalesOrderList = () => {
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState({
     orderId: '',
     customerName: '',
-    status: ''
+    status: 'all' // 默认显示全部状态
   });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
 
   const pageSize = 10;
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['salesOrders', pageIndex, filters],
-    queryFn: () => fetchSalesOrders({ pageIndex, pageSize, filters })
-  });
-
+const { data, isLoading, isError, refetch } = useQuery({
+  queryKey: ['salesOrders', pageIndex, pageSize, filters],
+  queryFn: () => getOrders({ 
+    pageIndex,
+    pageSize,
+    orderId: filters.orderId,
+    customerName: filters.customerName,
+    status: filters.status !== 'all' ? filters.status : undefined
+  })
+});
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPageIndex(0);
+    setPageIndex(0); // 筛选条件变化时重置页码
   };
 
   const handleEdit = (order) => {
@@ -55,7 +99,7 @@ const SalesOrderList = () => {
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     setEditingOrder(null);
-    refetch();
+    refetch(); // 表单提交成功后重新获取数据
   };
 
   if (isLoading) return <div className="text-center py-10">加载中...</div>;

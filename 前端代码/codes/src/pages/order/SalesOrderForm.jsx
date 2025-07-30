@@ -46,31 +46,54 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
     }
   });
 
-  const onSubmit = async (data) => {
-    // 如果是新增，生成订单ID
-    if (!initialData) {
-      data.id = 'SO' + generateId().substring(0, 5);
-      data.createdAt = format(new Date(), 'yyyy-MM-dd', { locale: zhCN });
-    } else {
-      // 编辑时记录修改日志
-      data.modifiedAt = new Date().toISOString();
-      data.modifiedBy = '当前用户';
-    }
+  // const onSubmit = async (data) => {
+  //   // 如果是新增，生成订单ID
+  //   if (!initialData) {
+  //     data.id = 'SO' + generateId().substring(0, 5);
+  //     data.createdAt = format(new Date(), 'yyyy-MM-dd', { locale: zhCN });
+  //   } else {
+  //     // 编辑时记录修改日志
+  //     data.modifiedAt = new Date().toISOString();
+  //     data.modifiedBy = '当前用户';
+  //   }
     
-    //console.log('订单信息提交成功:', data);
-        const res = await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (res.ok) {
-      const result = await res.json();
-      alert('订单创建成功，订单号：' + result.id);
+  //   //console.log('订单信息提交成功:', data);
+  //       const res = await fetch('/api/orders', {
+  //     method: 'POST',
+  //     headers: { 'Content-Type': 'application/json' },
+  //     body: JSON.stringify(data)
+  //   });
+  //   if (res.ok) {
+  //     const result = await res.json();
+  //     alert('订单创建成功，订单号：' + result.id);
+  //     onSuccess();
+  //   } else {
+  //     alert('提交失败');
+  //   }
+  //   //onSuccess();
+  // };
+
+    const onSubmit = async (data) => {
+    try {
+      // 处理提交数据（新增时无需手动生成ID，由后端生成）
+      const submitData = {
+        ...data,
+        // 新增时移除前端临时生成的id（如果有的话），由后端生成
+        id: initialData ? data.id : undefined,
+        createdAt: format(new Date(), 'yyyy-MM-dd', { locale: zhCN })
+      };
+
+      // 调用封装的创建订单接口
+      const response = await createOrder(submitData);
+      const result = response; // 接口直接返回订单数据（无外层data字段）
+
+      // 显示成功提示并回调
+      alert(`订单${initialData ? '更新' : '创建'}成功，订单号：${result.id}`);
       onSuccess();
-    } else {
-      alert('提交失败');
+    } catch (error) {
+      console.error('订单提交失败:', error);
+      alert(`订单${initialData ? '更新' : '创建'}失败：${error.message || '未知错误'}`);
     }
-    //onSuccess();
   };
 
   // 计算总金额
