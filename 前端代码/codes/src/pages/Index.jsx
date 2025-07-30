@@ -5,6 +5,7 @@ import { Users, FileText, Truck, Receipt, Plus, ShoppingCart, Package, RefreshCw
 import { usePermission } from '@/hooks/usePermission';
 import { PermissionCard } from '@/components/PermissionCard';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 
 const Index = () => {
   const [refreshing, setRefreshing] = useState(false);
@@ -20,37 +21,13 @@ const Index = () => {
     }
   }, []);
 
-  // 模拟业务数据
-  const stats = [
-    { 
-      title: '客户总数', 
-      value: '1,248', 
-      icon: <Users className="h-6 w-6" />, 
-      todayNew: '+12 今日新增',
-      color: 'blue'
-    },
-    { 
-      title: '订单总数', 
-      value: '3,567', 
-      icon: <FileText className="h-6 w-6" />, 
-      todayNew: '+45 今日新增',
-      color: 'green'
-    },
-    { 
-      title: '发货单总数', 
-      value: '2,891', 
-      icon: <Truck className="h-6 w-6" />, 
-      todayNew: '+28 今日新增',
-      color: 'purple'
-    },
-    { 
-      title: '发票总数', 
-      value: '2,456', 
-      icon: <Receipt className="h-6 w-6" />, 
-      todayNew: '+32 今日新增',
-      color: 'orange'
-    }
-  ];
+  // 模拟icon
+  const iconMap = {
+  Users,
+  FileText,
+  Package,
+  Receipt,
+};
 
   const modules = [
     {
@@ -96,6 +73,18 @@ const Index = () => {
     navigate(path);
   };
 
+  // api/activity.js
+ const fetchDashboardData = async () => {
+  const res = await fetch('/api/activities/latest');
+  if (!res.ok) throw new Error('无法获取最近动态');
+  return await res.json(); // 返回一个数组
+};
+
+const { data, isLoading } = useQuery({
+  queryKey: ['dashboardData'],
+  queryFn: fetchDashboardData,
+  refetchInterval: 10000, // 每10秒拉取一次
+});
   return (
     <div className="space-y-6">
       {/* 欢迎区域 */}
@@ -134,22 +123,26 @@ const Index = () => {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <Card key={index} className="border border-gray-200 hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-sm font-medium text-gray-600">{stat.title}</CardTitle>
-              <div className={`p-2 rounded-lg bg-${stat.color}-100 text-${stat.color}-600`}>
-                {stat.icon}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-800 mb-1">{stat.value}</div>
-              <p className="text-xs text-gray-500">{stat.todayNew}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  {data?.stats?.map((stat, index) => {
+    const Icon = iconMap[stat.icon]; // 动态拿到对应图标组件
+    return (
+      <Card key={index} className="border border-gray-200 hover:shadow-lg transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-sm font-medium text-gray-600">{stat.title}</CardTitle>
+          <div className={`p-2 rounded-lg bg-${stat.color}-100 text-${stat.color}-600`}>
+            {Icon && <Icon className="h-6 w-6" />} {/* 渲染图标组件 */}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-gray-800 mb-1">{stat.value}</div>
+          <p className="text-xs text-gray-500">{stat.todayNew}</p>
+        </CardContent>
+      </Card>
+    );
+  })}
+</div>
+
 
       {/* 权限管理卡片区域 */}
       <div>
@@ -169,57 +162,31 @@ const Index = () => {
       {/* 快捷操作区域 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border border-gray-200">
-          <CardHeader className="bg-gray-50">
-            <CardTitle className="text-gray-800">最近动态</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">新客户注册</p>
-                    <p className="text-xs text-gray-500">上海科技有限公司 - 2分钟前</p>
-                  </div>
-                </div>
-                <span className="text-xs text-blue-600">客户管理</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">新订单创建</p>
-                    <p className="text-xs text-gray-500">订单号：SO20241215001 - 5分钟前</p>
-                  </div>
-                </div>
-                <span className="text-xs text-green-600">销售订单</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">发货单生成</p>
-                    <p className="text-xs text-gray-500">发货单号：DO20241215008 - 10分钟前</p>
-                  </div>
-                </div>
-                <span className="text-xs text-purple-600">发货管理</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">发票开具</p>
-                    <p className="text-xs text-gray-500">发票号：INV20241215012 - 15分钟前</p>
-                  </div>
-                </div>
-                <span className="text-xs text-orange-600">财务管理</span>
+  <CardHeader className="bg-gray-50">
+    <CardTitle className="text-gray-800">最近动态</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {isLoading ? (
+        <p className="text-gray-400 text-sm">加载中...</p>
+      ) : (
+        data?.activities?.map((item, index) => (
+          <div key={index} className={`flex items-center justify-between p-4 rounded-lg bg-${item.color}-50`}>
+            <div className="flex items-center space-x-3">
+              <div className={`w-2 h-2 rounded-full bg-${item.color}-500`}></div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">{item.title}</p>
+                <p className="text-xs text-gray-500">{item.description}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <span className={`text-xs text-${item.color}-600`}>{item.module}</span>
+          </div>
+        ))
+      )}
+    </div>
+  </CardContent>
+</Card>
+
         
         <Card className="border border-gray-200">
           <CardHeader className="bg-gray-50">
