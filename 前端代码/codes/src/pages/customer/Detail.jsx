@@ -44,25 +44,84 @@ import { formatDate } from '@/lib/utils';
 //   };
 // };
 
-const fetchCustomerDetail = async (id) => {
-  console.log('请求客户详情，ID =', id); // 调试信息
-  const res = await fetch(`/api/customer/detail/${id}`);
-  if (!res.ok) throw new Error('请求失败'); // 处理请求错误
-  const json = await res.json();
-  return json.info;
-};
-// 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
+// const fetchCustomerDetail = async (id) => {
+//   console.log('请求客户详情，ID =', id); // 调试信息
+//   const res = await fetch(`/api/customer/detail/${id}`);
+//   if (!res.ok) throw new Error('请求失败'); // 处理请求错误
+//   const json = await res.json();
+//   return json.info;
+// };
+// // 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
+
+// const CustomerDetail = () => {
+//   const { id } = useParams();
+//   const { data: customer, isLoading, isError } = useQuery({
+//     queryKey: ['customer', id],
+//     queryFn: () => fetchCustomerDetail(id),
+//     enabled: !!id  // 新增！只有在 id 不为空时才执行
+//   });
+
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+// 导入API函数
+import { getCustomerDetail } from '@/apis/main';
 
 const CustomerDetail = () => {
-  const { id } = useParams();
-  const { data: customer, isLoading, isError } = useQuery({
-    queryKey: ['customer', id],
-    queryFn: () => fetchCustomerDetail(id),
-    enabled: !!id  // 新增！只有在 id 不为空时才执行
+  const { id } = useParams(); // 从路由参数中获取客户ID
+
+  // 使用React Query请求数据
+  const { data: customer, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['customerDetail', id], // 缓存键（包含ID确保唯一性）
+    queryFn: () => getCustomerDetail(id), // 调用API函数
+    enabled: !!id, // 只有ID存在时才发起请求
+    staleTime: 1000 * 60 * 5, // 5分钟内不重复请求（可根据需求调整）
   });
 
-  if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+  // 加载状态处理
+  if (isLoading) {
+    return (
+      <div className="text-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">加载客户详情中...</p>
+      </div>
+    );
+  }
+
+  // 错误状态处理
+  if (isError) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-500 mb-4">
+          加载失败：{error instanceof Error ? error.message : '未知错误'}
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={() => refetch()}
+          className="border-blue-300 text-blue-600"
+        >
+          重试
+        </Button>
+      </div>
+    );
+  }
+
+  // 数据为空处理（防止后端返回空数据）
+  if (!customer) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500">未找到该客户的信息</p>
+        <Button 
+          asChild 
+          variant="outline" 
+          className="mt-4"
+        >
+          <Link to="/customer/list">返回客户列表</Link>
+        </Button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6">
