@@ -13,6 +13,7 @@ import GenerateInvoice from "./GenerateInvoice";
 import InvoicePreview from '@/components/invoice/InvoicePreview';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
+import { Search } from "lucide-react"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { X } from "lucide-react";
 import { toPng } from 'html-to-image';
@@ -223,18 +224,21 @@ const handleExportPDFClick = useCallback(async (invoiceId) => {
 
     
             {/* 搜索框 */}
-            <div className="flex space-x-2 mb-4">
-              <input
-                type="text"
-                placeholder="搜索订单编号"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full border border-gray-300 rounded-md p-2"
-              />
+            <div className="relative md:col-span-2 flex items-center">
+    <span className="absolute left-3">
+        <Search className="h-4 w-4 text-gray-400" />
+    </span>
+    <Input
+        placeholder="搜索订单号、客户名称或商品名称..."
+        className="pl-10 h-12" // 保持左侧内边距
+        value={searchTerm}
+        // 搜索框相关：每输入一个字就会触发 setSearchTerm，进而自动搜索
+        onChange={(e) => setSearchTerm(e.target.value)}
+    />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border px-2 py-2 rounded"
+                className="pl-6 h-11 rounded"
               >
                 <option value="all">全部</option>
                 <option value="invoiced">已开票</option>
