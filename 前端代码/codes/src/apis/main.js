@@ -89,3 +89,49 @@ export const generateInvoice = async (orderId) => {
   const response = await request.post(`/api/invoice/generate/${orderId}`);
   return response;
 };
+
+
+//ZLC
+/**
+ * 获取订单列表（支持分页和多条件筛选）
+ * @param {Object} params - 请求参数
+ * @param {number} [params.pageIndex=0] - 当前页码（从0开始）
+ * @param {number} [params.pageSize=10] - 每页数量
+ * @param {string} [params.orderId] - 按订单编号模糊搜索
+ * @param {string} [params.customerName] - 按客户名称模糊搜索
+ * @param {string} [params.status] - 订单状态筛选
+ * @returns {Promise} - 包含订单列表、总记录数和总页数的响应数据
+ */
+export const getOrders = async (params = {}) => {
+  // 设置默认参数
+  const defaultParams = {
+    pageIndex: 0,
+    pageSize: 10,
+    ...params
+  };
+  
+  const response = await request.get('/api/orders', { params: defaultParams });
+  return response;
+};
+
+
+/**
+ * 创建销售订单
+ * @param {Object} orderData - 订单数据
+ * @param {string} orderData.customerId - 客户ID（必填）
+ * @param {string} orderData.productName - 商品名称（必填）
+ * @param {string} orderData.productId - 商品ID（必填）
+ * @param {number} orderData.quantity - 数量（必填）
+ * @param {number} orderData.unitPrice - 单价（必填）
+ * @param {number} orderData.totalAmount - 总金额（必填）
+ * @param {number} orderData.paidAmount - 实付金额（必填）
+ * @param {string} orderData.status - 订单状态（必填）
+ * @param {string} orderData.salesPerson - 销售人员（必填）
+ * @param {string} [orderData.remarks] - 备注（可选）
+ * @param {string} [orderData.createdAt] - 创建时间（可选）
+ * @returns {Promise} - 包含创建的订单信息（含订单ID）的响应数据
+ */
+export const createOrder = async (orderData) => {
+  const response = await request.post('/api/orders', orderData);
+  return response;
+};
