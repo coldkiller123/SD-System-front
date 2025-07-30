@@ -20,7 +20,7 @@
 //     unitPrice: Math.floor(100 + Math.random() * 900),
 //     totalAmount: 0, // 稍后计算
 //     paidAmount: 0, // 稍后计算
-//     status: ['待付款', '已付款', '已发货', '已完成', '已取消'][id.charCodeAt(2) % 5],
+//     status: ['待付款', '已付款',  '已取消'][id.charCodeAt(2) % 5],
 //     salesPerson: `销售员${id.charCodeAt(2) % 5 + 1}`,
 //     createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)).toISOString(),
 //     remarks: id.charCodeAt(2) % 3 === 0 ? '加急订单' : id.charCodeAt(2) % 3 === 1 ? '普通订单' : '大客户订单',
@@ -314,7 +314,6 @@ const SalesOrderDetail = () => {
                     <p className="mt-1">
                       <span className={`px-2 py-1 rounded-full text-sm ${
                         order.status === '已完成' ? 'bg-green-100 text-green-800' :
-                        order.status === '已发货' ? 'bg-blue-100 text-blue-800' :
                         order.status === '已付款' ? 'bg-yellow-100 text-yellow-800' :
                         order.status === '待付款' ? 'bg-gray-100 text-gray-800' :
                         'bg-red-100 text-red-800'

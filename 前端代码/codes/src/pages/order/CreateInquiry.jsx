@@ -14,34 +14,29 @@ import { cn } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { CustomerSearch } from '@/components/CustomerSearch';
+import { ProductSelector } from '@/components/ProductSelector';
 
 // 表单验证规则
 const formSchema = z.object({
   customerId: z.string().min(1, '请选择客户'),
   productName: z.string().min(1, '请选择商品'),
   quantity: z.number().min(1, '数量至少为1'),
-  unit: z.string().min(1, '请选择单位'),
   productId: z.string().min(1, '商品ID不能为空'),
   inquiryDate: z.date(),
   remarks: z.string().optional(),
 });
 
-// 模拟客户数据
-const customers = [
-  { id: 'C1001', name: '客户A' },
-  { id: 'C1002', name: '客户B' },
-  { id: 'C1003', name: '客户C' },
-  { id: 'C1004', name: '客户D' },
-  { id: 'C1005', name: '客户E' },
-];
-
 // 模拟商品数据
 const products = [
-  { id: 'P1001', name: '商品A', units: ['个', '箱'] },
-  { id: 'P1002', name: '商品B', units: ['件', '套'] },
-  { id: 'P1003', name: '商品C', units: ['千克', '吨'] },
-  { id: 'P1004', name: '商品D', units: ['米', '卷'] },
-  { id: 'P1005', name: '商品E', units: ['瓶', '箱'] },
+  { id: 'P1001', name: '智能手机' },
+  { id: 'P1002', name: '笔记本电脑' },
+  { id: 'P1003', name: '平板电脑'},
+  { id: 'P1004', name: '智能手表'},
+  { id: 'P1005', name: '无线耳机' },
+  { id: 'P1006', name: '蓝牙音箱'},
+  { id: 'P1007', name: '数码相机'},
+  { id: 'P1008', name: '游戏主机'},
 ];
 
 const CreateInquiry = ({ onSuccess, onCancel }) => {
@@ -51,54 +46,44 @@ const CreateInquiry = ({ onSuccess, onCancel }) => {
       customerId: '',
       productName: '',
       quantity: 1,
-      unit: '',
       productId: '',
       inquiryDate: new Date(),
       remarks: '',
     }
   });
 
-const onSubmit = async (data) => {
-  // 生成唯一询价单号
-  const inquiryId = 'IQ' + generateId().substring(0, 5);
-
-  // 获取当前用户作为销售人员
-  const salesPerson = '管理员';
-
-  const inquiryData = {
-    inquiryId,
-    ...data,
-    salesPerson,
-    status: '未报价',
-    createdAt: new Date().toISOString()
+  const onSubmit = (data) => {
+    // 生成唯一询价单号
+    const inquiryId = 'IQ' + generateId().substring(0, 5);
+    
+    // 获取当前用户作为销售人员
+    const salesPerson = '管理员'; // 实际应用中应从登录信息获取
+    
+    const inquiryData = {
+      inquiryId, // 统一使用 inquiryId
+      ...data,
+      salesPerson,
+      status: '未报价',
+      createdAt: new Date().toISOString()
+    };
+    
+    console.log('询价单提交成功:', inquiryData);
+    onSuccess();
   };
 
-  // 发送POST请求到mock接口
-  const res = await fetch('/api/inquiries', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(inquiryData)
-  });
-
-  if (res.ok) {
-    // 可选：处理返回数据
-    // const result = await res.json();
-    onSuccess();
-  } else {
-    // 可选：错误处理
-    alert('提交失败');
-  }
-};
-
-
   // 处理商品选择
-  const handleProductSelect = (productName) => {
-    const product = products.find(p => p.name === productName);
+  const handleProductSelect = (productId) => {
+    const product = products.find(p => p.id === productId);
     if (product) {
       form.setValue('productName', product.name);
       form.setValue('productId', product.id);
-      form.setValue('unit', product.units[0]); // 默认选择第一个单位
     }
+  };
+
+  // 处理从商品详情弹窗选择商品
+  const handleSelectProductFromDialog = (product) => {
+    form.setValue('productName', product.name);
+    form.setValue('productId', product.id);
   };
 
   return (
@@ -127,57 +112,11 @@ const onSubmit = async (data) => {
                     <FormLabel className="flex items-center">
                       客户 <span className="text-red-500 ml-1">*</span>
                     </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value
-                              ? customers.find(
-                                  (customer) => customer.id === field.value
-                                )?.name
-                              : "选择客户"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0">
-                        <div className="p-2">
-                          <Input placeholder="搜索客户..." className="mb-2" />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {customers.map((customer) => (
-                            <Button
-                              key={customer.id}
-                              variant="ghost"
-                              className={cn(
-                                "w-full justify-start font-normal",
-                                field.value === customer.id && "bg-blue-50"
-                              )}
-                              onClick={() => {
-                                form.setValue("customerId", customer.id);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  field.value === customer.id
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                              {customer.name} ({customer.id})
-                            </Button>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <CustomerSearch 
+                      value={field.value} 
+                      onValueChange={field.onChange} 
+                      placeholder="搜索并选择客户..."
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -191,60 +130,15 @@ const onSubmit = async (data) => {
                     <FormLabel className="flex items-center">
                       商品名称 <span className="text-red-500 ml-1">*</span>
                     </FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              "w-full justify-between",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value || "选择商品"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0">
-                        <div className="p-2">
-                          <Input 
-                            placeholder="搜索商品..." 
-                            className="mb-2"
-                            onChange={(e) => form.setValue('productName', e.target.value)}
-                          />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto">
-                          {products
-                            .filter(product => 
-                              product.name.includes(field.value) || 
-                              product.id.includes(field.value)
-                            )
-                            .map((product) => (
-                              <Button
-                                key={product.id}
-                                variant="ghost"
-                                className={cn(
-                                  "w-full justify-start font-normal",
-                                  field.value === product.name && "bg-blue-50"
-                                )}
-                                onClick={() => handleProductSelect(product.name)}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    field.value === product.name
-                                      ? "opacity-100"
-                                      : "opacity-0"
-                                  )}
-                                />
-                                {product.name} ({product.id})
-                              </Button>
-                            ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <ProductSelector 
+                      value={form.watch('productId')} 
+                      onValueChange={(value) => {
+                        field.onChange(products.find(p => p.id === value)?.name || '');
+                        handleProductSelect(value);
+                      }} 
+                      placeholder="搜索并选择商品..."
+                      onSelectProduct={handleSelectProductFromDialog}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -266,31 +160,6 @@ const onSubmit = async (data) => {
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center">
-                      单位 <span className="text-red-500 ml-1">*</span>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="选择单位" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {products.find(p => p.name === form.watch('productName'))?.units.map(unit => (
-                          <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -11,6 +11,9 @@ import { X, Calendar, Calculator } from 'lucide-react';
 import { generateId } from '@/lib/utils';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import { CustomerSearch } from '@/components/CustomerSearch';
+import { ProductSelector } from '@/components/ProductSelector';
+import { useEffect } from 'react';
 
 // 表单验证规则
 const formSchema = z.object({
@@ -27,6 +30,18 @@ const formSchema = z.object({
   remarks: z.string().optional(),
   createdAt: z.string().optional(), // 新增创建时间字段
 });
+
+// 模拟商品数据
+const products = [
+  { id: 'P1001', name: '智能手机', price: 2999 },
+  { id: 'P1002', name: '笔记本电脑', price: 5999 },
+  { id: 'P1003', name: '平板电脑', price: 1999 },
+  { id: 'P1004', name: '智能手表', price: 1299 },
+  { id: 'P1005', name: '无线耳机', price: 599 },
+  { id: 'P1006', name: '蓝牙音箱', price: 399 },
+  { id: 'P1007', name: '数码相机', price: 3999 },
+  { id: 'P1008', name: '游戏主机', price: 2499 },
+];
 
 const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
   const form = useForm({
@@ -97,50 +112,36 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
   };
 
   // 计算总金额
-  const calculateTotal = () => {
-    const quantity = form.getValues('quantity') || 0;
-    const unitPrice = form.getValues('unitPrice') || 0;
-    const total = quantity * unitPrice;
-    form.setValue('totalAmount', total);
-    
-    // 如果状态是已付款或已完成，实付金额默认为总金额
-    const status = form.getValues('status');
-    if (status === '已付款' || status === '已完成') {
-      form.setValue('paidAmount', total);
-    }
-  };
+const calculateTotal = () => {
+  const quantity = form.getValues('quantity') || 0;
+  const unitPrice = form.getValues('unitPrice') || 0;
+  const total = quantity * unitPrice;
+  form.setValue('totalAmount', total);
+  
+  // 如果状态是已付款，实付金额默认为总金额
+  const status = form.getValues('status');
+  if (status === '已付款') {
+    form.setValue('paidAmount', total);
+  }
+};
 
-  // 商品选择变化时更新商品ID
-  const handleProductChange = (value) => {
-    const products = {
-      '商品1': { id: 'P1001', price: 299 },
-      '商品2': { id: 'P1002', price: 499 },
-      '商品3': { id: 'P1003', price: 799 },
-      '商品4': { id: 'P1004', price: 1299 },
-      '商品5': { id: 'P1005', price: 1999 },
-    };
-    
-    if (products[value]) {
-      form.setValue('productId', products[value].id);
-      form.setValue('unitPrice', products[value].price);
-      calculateTotal();
-    }
-  };
+// 监听状态变化
+useEffect(() => {
+  const status = form.getValues('status');
+  if (status === '已付款') {
+    calculateTotal();  // 调用计算函数，自动填充实付金额
+  }
+}, [form.getValues('status')]);  // 监听状态字段变化
 
-  // 客户选择变化时更新客户ID
-  const handleCustomerChange = (value) => {
-    const customers = {
-      '客户1': 'C1001',
-      '客户2': 'C1002',
-      '客户3': 'C1003',
-      '客户4': 'C1004',
-      '客户5': 'C1005',
-    };
-    
-    if (customers[value]) {
-      form.setValue('customerId', customers[value]);
-    }
-  };
+// 商品选择变化时更新单价
+const handleProductChange = (productId) => {
+  const product = products.find(p => p.id === productId);
+  if (product) {
+    form.setValue('unitPrice', product.price);
+    calculateTotal();  // 更新单价后重新计算总金额
+  }
+};
+
 
   return (
     <Card className="border-0 shadow-none">
@@ -211,23 +212,13 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
                     <FormLabel className="flex items-center">
                       客户 <span className="text-red-500 ml-1">*</span>
                     </FormLabel>
-                    <Select onValueChange={(value) => {
-                      handleCustomerChange(value);
-                      field.onChange(value);
-                    }} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择客户" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="客户1">客户1</SelectItem>
-                        <SelectItem value="客户2">客户2</SelectItem>
-                        <SelectItem value="客户3">客户3</SelectItem>
-                        <SelectItem value="客户4">客户4</SelectItem>
-                        <SelectItem value="客户5">客户5</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CustomerSearch 
+                        value={field.value} 
+                        onValueChange={field.onChange} 
+                        placeholder="搜索并选择客户..."
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -235,29 +226,20 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
               
               <FormField
                 control={form.control}
-                name="productName"
+                name="productId"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel className="flex items-center">
-                      商品名称 <span className="text-red-500 ml-1">*</span>
+                      商品 <span className="text-red-500 ml-1">*</span>
                     </FormLabel>
-                    <Select onValueChange={(value) => {
-                      handleProductChange(value);
-                      field.onChange(value);
-                    }} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="请选择商品" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="商品1">商品1</SelectItem>
-                        <SelectItem value="商品2">商品2</SelectItem>
-                        <SelectItem value="商品3">商品3</SelectItem>
-                        <SelectItem value="商品4">商品4</SelectItem>
-                        <SelectItem value="商品5">商品5</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <ProductSelector 
+                      value={field.value} 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        handleProductChange(value);
+                      }} 
+                      placeholder="搜索并选择商品..."
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -391,8 +373,6 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
                       <SelectContent>
                         <SelectItem value="待付款">待付款</SelectItem>
                         <SelectItem value="已付款">已付款</SelectItem>
-                        <SelectItem value="已发货">已发货</SelectItem>
-                        <SelectItem value="已完成">已完成</SelectItem>
                         <SelectItem value="已取消">已取消</SelectItem>
                       </SelectContent>
                     </Select>
@@ -427,6 +407,7 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
                   </FormItem>
                 )}
               />
+              
               
               <FormField
                 control={form.control}
