@@ -5,6 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Printer, Share2, ArrowLeft } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { getRegionLabel, getIndustryLabel } from '@/constants/options';
+import { getCreditRatingLabel } from '@/constants/options';
 
 // 模拟API获取客户详情
 // const fetchCustomerDetail = async (id) => {
@@ -44,83 +46,84 @@ import { formatDate } from '@/lib/utils';
 //   };
 // };
 
-// const fetchCustomerDetail = async (id) => {
-//   console.log('请求客户详情，ID =', id); // 调试信息
-//   const res = await fetch(`/api/customer/detail/${id}`);
-//   if (!res.ok) throw new Error('请求失败'); // 处理请求错误
-//   const json = await res.json();
-//   return json.info;
-// };
-// // 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
-
-// const CustomerDetail = () => {
-//   const { id } = useParams();
-//   const { data: customer, isLoading, isError } = useQuery({
-//     queryKey: ['customer', id],
-//     queryFn: () => fetchCustomerDetail(id),
-//     enabled: !!id  // 新增！只有在 id 不为空时才执行
-//   });
-
-//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
-
-// 导入API函数
-import { getCustomerDetail } from '@/apis/main';
+// HXY前端模拟数据测试
+const fetchCustomerDetail = async (id) => {
+  console.log('请求客户详情，ID =', id); // 调试信息
+  const res = await fetch(`/api/customer/detail/${id}`);
+  if (!res.ok) throw new Error('请求失败'); // 处理请求错误
+  const json = await res.json();
+  return json.info;
+};
+// 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
 
 const CustomerDetail = () => {
-  const { id } = useParams(); // 从路由参数中获取客户ID
-
-  // 使用React Query请求数据
-  const { data: customer, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['customerDetail', id], // 缓存键（包含ID确保唯一性）
-    queryFn: () => getCustomerDetail(id), // 调用API函数
-    enabled: !!id, // 只有ID存在时才发起请求
-    staleTime: 1000 * 60 * 5, // 5分钟内不重复请求（可根据需求调整）
+  const { id } = useParams();
+  const { data: customer, isLoading, isError } = useQuery({
+    queryKey: ['customer', id],
+    queryFn: () => fetchCustomerDetail(id),
+    enabled: !!id  // 新增！只有在 id 不为空时才执行
   });
 
-  // 加载状态处理
-  if (isLoading) {
-    return (
-      <div className="text-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">加载客户详情中...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="text-center py-10">加载中...</div>;
+  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
-  // 错误状态处理
-  if (isError) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-red-500 mb-4">
-          加载失败：{error instanceof Error ? error.message : '未知错误'}
-        </p>
-        <Button 
-          variant="outline" 
-          onClick={() => refetch()}
-          className="border-blue-300 text-blue-600"
-        >
-          重试
-        </Button>
-      </div>
-    );
-  }
+// // 导入API函数
+// import { getCustomerDetail } from '@/apis/main';
 
-  // 数据为空处理（防止后端返回空数据）
-  if (!customer) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-gray-500">未找到该客户的信息</p>
-        <Button 
-          asChild 
-          variant="outline" 
-          className="mt-4"
-        >
-          <Link to="/customer/list">返回客户列表</Link>
-        </Button>
-      </div>
-    );
-  }
+// const CustomerDetail = () => {
+//   const { id } = useParams(); // 从路由参数中获取客户ID
+
+//   // 使用React Query请求数据
+//   const { data: customer, isLoading, isError, error, refetch } = useQuery({
+//     queryKey: ['customerDetail', id], // 缓存键（包含ID确保唯一性）
+//     queryFn: () => getCustomerDetail(id), // 调用API函数
+//     enabled: !!id, // 只有ID存在时才发起请求
+//     staleTime: 1000 * 60 * 5, // 5分钟内不重复请求（可根据需求调整）
+//   });
+
+//   // 加载状态处理
+//   if (isLoading) {
+//     return (
+//       <div className="text-center py-20">
+//         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+//         <p className="mt-4 text-gray-600">加载客户详情中...</p>
+//       </div>
+//     );
+//   }
+
+//   // 错误状态处理
+//   if (isError) {
+//     return (
+//       <div className="text-center py-20">
+//         <p className="text-red-500 mb-4">
+//           加载失败：{error instanceof Error ? error.message : '未知错误'}
+//         </p>
+//         <Button 
+//           variant="outline" 
+//           onClick={() => refetch()}
+//           className="border-blue-300 text-blue-600"
+//         >
+//           重试
+//         </Button>
+//       </div>
+//     );
+//   }
+
+//   // 数据为空处理（防止后端返回空数据）
+//   if (!customer) {
+//     return (
+//       <div className="text-center py-20">
+//         <p className="text-gray-500">未找到该客户的信息</p>
+//         <Button 
+//           asChild 
+//           variant="outline" 
+//           className="mt-4"
+//         >
+//           <Link to="/customer/list">返回客户列表</Link>
+//         </Button>
+//       </div>
+//     );
+//   } JSX后端测试！！！
 
 
   return (
@@ -159,7 +162,7 @@ const CustomerDetail = () => {
         <TabsList className="grid grid-cols-3 w-full max-w-md bg-blue-50">
           <TabsTrigger value="basic" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">基础信息</TabsTrigger>
           <TabsTrigger value="contacts" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">联系人</TabsTrigger>
-          <TabsTrigger value="business" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">业务关系</TabsTrigger> 
+          {/* <TabsTrigger value="business" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">业务关系</TabsTrigger>  */}
         </TabsList>
         
         <TabsContent value="basic">
@@ -180,7 +183,7 @@ const CustomerDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">所在地区</label>
-                    <p className="mt-1">{customer.region}</p>
+                    <p className="mt-1">{getRegionLabel(customer.region)}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">所在公司</label>
@@ -191,12 +194,16 @@ const CustomerDetail = () => {
                     <label className="text-sm font-medium text-gray-500">详细地址</label>
                     <p className="mt-1">{customer.address}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">已上传附件</label>
+                    <p className="mt-1">{customer.attachments}</p>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500">所属行业</label>
-                    <p className="mt-1">{customer.industry}</p>
+                    <p className="mt-1">{getIndustryLabel(customer.industry)}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">联系电话</label>
@@ -204,7 +211,7 @@ const CustomerDetail = () => {
                   </div> 
                   {/* 新增 */}
                   <div>
-                    <label className="text-sm font-medium text-gray-500">信用等级</label>
+                    {/* <label className="text-sm font-medium text-gray-500">信用等级</label>
                     <p className="mt-1">
                       <span className={`px-2 py-1 rounded-full text-sm ${
                         customer.creditRating === 'AAA' ? 'bg-green-100 text-green-800' :
@@ -213,6 +220,12 @@ const CustomerDetail = () => {
                         'bg-red-100 text-red-800'
                       }`}>
                         {customer.creditRating}
+                      </span>
+                    </p> */}
+                    <label className="text-sm font-medium text-gray-500">信用等级</label>
+                    <p className="mt-1">
+                      <span className={`px-2 py-1 rounded-full text-sm ...`}>
+                        {getCreditRatingLabel(customer.creditRating)}
                       </span>
                     </p>
                   </div>
