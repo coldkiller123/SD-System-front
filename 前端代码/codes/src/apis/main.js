@@ -135,3 +135,20 @@ export const createOrder = async (orderData) => {
   const response = await request.post('/api/orders', orderData);
   return response;
 };
+
+
+/**
+ * 获取销售订单详情（含操作历史）
+ * @param {string} id - 订单编号（必填）
+ * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ */
+export const getOrderDetail = async (id) => {
+  if (!id) {
+    throw new Error('订单编号不能为空');
+  }
+  const response = await request.get(`/api/orders/${id}`);
+  console.log('后端返回的原始响应：', response);
+  console.log('客户详情数据：', response.info); 
+  console.log('客户详情数据：', response.data); 
+  return response;
+};
