@@ -9,7 +9,10 @@ import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, Pagi
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Search, Plus, Filter, Download, Eye, Pencil } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { REGION_OPTIONS, INDUSTRY_OPTIONS, getRegionLabel, getIndustryLabel } from '@/constants/options';
+import SearchableSelect from '@/components/SearchableSelect';
 import CustomerForm from './Form.jsx';
+import { CREDIT_RATING_OPTIONS, getCreditRatingLabel } from '@/constants/options';
 
 // 模拟API获取客户数据
 // const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
@@ -55,96 +58,44 @@ import CustomerForm from './Form.jsx';
 //   };
 // };
 
-// const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-//   const queryParams = new URLSearchParams({
-//     pageIndex: String(pageIndex),
-//     pageSize: String(pageSize),
-//     name: filters.name || '',
-//     region: filters.region || '',
-//     industry: filters.industry || ''
-//   });
-
-//   const res = await fetch(`/api/customer/list?${queryParams}`);
-//   const json = await res.json();
-//   return json.data;
-// };
-// // 测试！fetchCustomers只负责请求和获取数据，筛选和分页参数会通过URL传递给后端，由后端返回已经筛选和分页好的数据。
-
-
-// const CustomerList = () => {
-//   const [pageIndex, setPageIndex] = useState(0);
-//   const [filters, setFilters] = useState({
-//     name: '',
-//     region: '',
-//     industry: ''
-//   });
-//   const [isFormOpen, setIsFormOpen] = useState(false);
-//   const [editingCustomer, setEditingCustomer] = useState(null);
-//   const pageSize = 10;
-
-//   const { data, isLoading, isError, refetch } = useQuery({
-//     queryKey: ['customers', pageIndex, filters],
-//     queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
-//   });
-
-//   const handleFilterChange = (key, value) => {
-//     setFilters(prev => ({ ...prev, [key]: value }));
-//     setPageIndex(0);
-//   };
-
-//   const handleEdit = (customer) => {
-//     setEditingCustomer(customer);
-//     setIsFormOpen(true);
-//   };
-
-//   const handleFormSuccess = () => {
-//     setIsFormOpen(false);
-//     setEditingCustomer(null);
-//     refetch();
-//   };
-
-//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
-
-import { getCustomerList } from '@/apis/main';
-
+// HXY前端模拟数据测试
 const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-  const response = await getCustomerList({
-    pageIndex: pageIndex + 1,
-    pageSize,
+  const queryParams = new URLSearchParams({
+    pageIndex: String(pageIndex),
+    pageSize: String(pageSize),
     name: filters.name || '',
     region: filters.region || '',
-    industry: filters.industry || ''
+    industry: filters.industry || '',
+    creditRating: filters.creditRating || ''
   });
 
-  return response.data;
+  const res = await fetch(`/api/customer/list?${queryParams}`);
+  const json = await res.json();
+  return json.data;
 };
+// 测试！fetchCustomers只负责请求和获取数据，筛选和分页参数会通过URL传递给后端，由后端返回已经筛选和分页好的数据。
+
 
 const CustomerList = () => {
   const [pageIndex, setPageIndex] = useState(0);
   const [filters, setFilters] = useState({
     name: '',
     region: '',
-    industry: ''
+    industry: '',
+    creditRating: ''
   });
-  // 新增：用于临时存储输入框内容
-  const [inputValue, setInputValue] = useState(''); 
-
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
-  const pageSize = 10; // 每页条数，可根据需求修改
+  const pageSize = 10;
 
-  // 使用React Query调用API
   const { data, isLoading, isError, refetch } = useQuery({
-    //  queryKey包含所有影响数据的参数，确保参数变化时重新请求
-    queryKey: ['customers', pageIndex, pageSize, filters],
-    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters }),
-    staleTime: 1000 * 60 * 1 // 1分钟缓存，减少重复请求
+    queryKey: ['customers', pageIndex, filters],
+    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
   });
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPageIndex(0); // 筛选条件变化时重置到第一页
+    setPageIndex(0);
   };
 
   const handleEdit = (customer) => {
@@ -155,27 +106,82 @@ const CustomerList = () => {
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     setEditingCustomer(null);
-    refetch(); // 新增/编辑成功后刷新列表
+    refetch();
   };
 
-  // 加载状态处理
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  // 错误状态处理
-  if (isError) return (
-    <div className="text-center py-10 text-red-500">
-      加载数据失败
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="ml-2" 
-        onClick={() => refetch()}
-      >
-        重试
-      </Button>
-    </div>
-  );
-  // 防止数据未加载时的报错（安全处理）
-  if (!data) return null;
+  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+// import { getCustomerList } from '@/apis/main';
+
+// const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
+//   const response = await getCustomerList({
+//     pageIndex: pageIndex + 1,
+//     pageSize,
+//     name: filters.name || '',
+//     region: filters.region || '',
+//     industry: filters.industry || ''
+//   });
+
+//   return response.data;
+// };
+
+// const CustomerList = () => {
+//   const [pageIndex, setPageIndex] = useState(0);
+//   const [filters, setFilters] = useState({
+//     name: '',
+//     region: '',
+//     industry: ''
+//   });
+//   // 新增：用于临时存储输入框内容
+//   const [inputValue, setInputValue] = useState(''); 
+
+//   const [isFormOpen, setIsFormOpen] = useState(false);
+//   const [editingCustomer, setEditingCustomer] = useState(null);
+//   const pageSize = 10; // 每页条数，可根据需求修改
+
+//   // 使用React Query调用API
+//   const { data, isLoading, isError, refetch } = useQuery({
+//     //  queryKey包含所有影响数据的参数，确保参数变化时重新请求
+//     queryKey: ['customers', pageIndex, pageSize, filters],
+//     queryFn: () => fetchCustomers({ pageIndex, pageSize, filters }),
+//     staleTime: 1000 * 60 * 1 // 1分钟缓存，减少重复请求
+//   });
+
+//   const handleFilterChange = (key, value) => {
+//     setFilters(prev => ({ ...prev, [key]: value }));
+//     setPageIndex(0); // 筛选条件变化时重置到第一页
+//   };
+
+//   const handleEdit = (customer) => {
+//     setEditingCustomer(customer);
+//     setIsFormOpen(true);
+//   };
+
+//   const handleFormSuccess = () => {
+//     setIsFormOpen(false);
+//     setEditingCustomer(null);
+//     refetch(); // 新增/编辑成功后刷新列表
+//   };
+
+//   // 加载状态处理
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   // 错误状态处理
+//   if (isError) return (
+//     <div className="text-center py-10 text-red-500">
+//       加载数据失败
+//       <Button 
+//         variant="ghost" 
+//         size="sm" 
+//         className="ml-2" 
+//         onClick={() => refetch()}
+//       >
+//         重试
+//       </Button>
+//     </div>
+//   );
+//   // 防止数据未加载时的报错（安全处理）
+//   if (!data) return null; JSX后端！！
 
   return (
     <div className="space-y-6">
@@ -202,90 +208,118 @@ const CustomerList = () => {
                 <Input 
                   placeholder="搜索客户名称" 
                   className="pl-10"
-                  // 输入框的值通过临时变量控制（不直接绑定 filters.name）
-                  value={inputValue}
-                  // 输入时只更新临时变量，不影响 filters
-                  onChange={(e) => setInputValue(e.target.value)}
-                  // 按下 Enter 时同步到 filters 并搜索
-                  onKeyDown={(e) => {
-                    if (e.keyCode === 13) {
-                      e.preventDefault();
-                      // 将输入的内容同步到 filters.name
-                      setFilters(prev => ({ ...prev, name: inputValue }));
-                      setPageIndex(0);
-                      refetch();
-                      // 可选：清空输入框
-                      // setInputValue('');
-                    }
-                  }}
+                  // // 输入框的值通过临时变量控制（不直接绑定 filters.name）
+                  // value={inputValue}
+                  // // 输入时只更新临时变量，不影响 filters
+                  // onChange={(e) => setInputValue(e.target.value)}
+                  // // 按下 Enter 时同步到 filters 并搜索
+                  // onKeyDown={(e) => {
+                  //   if (e.keyCode === 13) {
+                  //     e.preventDefault();
+                  //     // 将输入的内容同步到 filters.name
+                  //     setFilters(prev => ({ ...prev, name: inputValue }));
+                  //     setPageIndex(0);
+                  //     refetch();
+                  //     // 可选：清空输入框
+                  //     // setInputValue('');
+                  //   }
+                  // }} JSX后端测试！！！
+                  value={filters.name}
+                  onChange={(e) => handleFilterChange('name', e.target.value)}
                 />
             </div>
             
             <Select 
               value={filters.region} 
               onValueChange={(value) => handleFilterChange('region', value)}
-              onOpenChange={(open) => {
-                if (open) {
-                  setFilters(prev => ({ ...prev, name: inputValue }));
-                  setPageIndex(0);
-                  refetch();
-                }
-              }}
+              // onOpenChange={(open) => {
+              //   if (open) {
+              //     setFilters(prev => ({ ...prev, name: inputValue }));
+              //     setPageIndex(0);
+              //     refetch();
+              //   }
+              // }} JSX后端测试！！！
             >
               <SelectTrigger>
                 <SelectValue placeholder="选择地区" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部地区</SelectItem>
-                <SelectItem value="华东地区">华东</SelectItem>
-                <SelectItem value="华北地区">华北</SelectItem>
-                <SelectItem value="华南地区">华南</SelectItem>
-                <SelectItem value="华中地区">华中</SelectItem>
-                <SelectItem value="西南地区">西南</SelectItem>
+                {/* <SelectItem value="华东">华东</SelectItem>
+                <SelectItem value="华北">华北</SelectItem>
+                <SelectItem value="华南">华南</SelectItem>
+                <SelectItem value="华中">华中</SelectItem>
+                <SelectItem value="西南">西南</SelectItem> */}
+                {REGION_OPTIONS.map((option) => (
+                  <SelectItem key={option.code} value={option.code}>
+                    {option.code} {option.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
             <Select 
               value={filters.industry} 
               onValueChange={(value) => handleFilterChange('industry', value)}
-              onOpenChange={(open) => {
-                if (open) {
-                  setFilters(prev => ({ ...prev, name: inputValue }));
-                  setPageIndex(0);
-                  refetch();
-                }
-              }}
+              // onOpenChange={(open) => {
+              //   if (open) {
+              //     setFilters(prev => ({ ...prev, name: inputValue }));
+              //     setPageIndex(0);
+              //     refetch();
+              //   }
+              // }} JSX后端测试！！！
             >
               <SelectTrigger>
                 <SelectValue placeholder="选择行业" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部行业</SelectItem>
-                <SelectItem value="制造业">制造业</SelectItem>
+                {/* <SelectItem value="制造业">制造业</SelectItem>
                 <SelectItem value="零售业">零售业</SelectItem>
                 <SelectItem value="金融业">金融业</SelectItem>
                 <SelectItem value="互联网">互联网</SelectItem>
-                <SelectItem value="教育">教育</SelectItem>
+                <SelectItem value="教育">教育</SelectItem> */}
+                {INDUSTRY_OPTIONS.map((option) => (
+                  <SelectItem key={option.code} value={option.code}>
+                    {option.code} {option.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
-            <Button variant="outline" className="border-blue-200 text-blue-600">
+            {/* <Button variant="outline" className="border-blue-200 text-blue-600">
               <Filter className="mr-2 h-4 w-4" /> 更多筛选
-            </Button>
+            </Button> */}
+            <Select
+              value={filters.creditRating}
+              onValueChange={value => handleFilterChange('creditRating', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="选择信用等级" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部信用等级</SelectItem>
+                {CREDIT_RATING_OPTIONS.map(option => (
+                  <SelectItem key={option.code} value={option.code}>
+                    {option.code} {option.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="border border-blue-100 rounded-lg overflow-hidden">
-            <Table>
+            <Table className="text-sm">
               <TableHeader className="bg-blue-50">
                 <TableRow>
                   <TableHead className="w-[100px] text-blue-800">客户编号</TableHead>
-                  <TableHead className="text-blue-800">客户名称</TableHead>
-                  <TableHead className="text-blue-800">所在地区</TableHead>
-                  <TableHead className="text-blue-800">所属行业</TableHead>
+                  <TableHead className="text-blue-800 whitespace-nowrap">客户名称</TableHead>
+                  <TableHead className="text-blue-800 whitespace-nowrap">所在地区</TableHead>
+                  <TableHead className="text-blue-800 whitespace-nowrap">所属行业</TableHead>
                   <TableHead className="text-blue-800 w-[100px]">所属公司</TableHead>
                   <TableHead className="text-blue-800">联系电话</TableHead>
-                  <TableHead className="text-blue-800">联系人</TableHead>
-                  <TableHead className="text-blue-800">信用等级</TableHead>
+                  <TableHead className="text-blue-800 whitespace-nowrap">联系人</TableHead>
+                  <TableHead className="text-blue-800 whitespace-nowrap">信用等级</TableHead>
                   {/* <TableHead className="text-blue-800">创建时间</TableHead> */}
                   <TableHead className="text-blue-800 pl-6">操作</TableHead>
                 </TableRow>
@@ -295,20 +329,15 @@ const CustomerList = () => {
                   <TableRow key={customer.id} className="hover:bg-blue-50">
                     <TableCell className="font-medium">{customer.id}</TableCell>
                     <TableCell>{customer.name}</TableCell>
-                    <TableCell>{customer.region}</TableCell>
-                    <TableCell>{customer.industry}</TableCell>
+                    <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{getRegionLabel(customer.region)}</TableCell>
+                    <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{getIndustryLabel(customer.industry)}</TableCell>
                     <TableCell>{customer.company}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell>{customer.contact || customer.contacts?.[0]?.name || '—'}</TableCell>
                     {/* 返回联系人下拉框数组中的姓名 */}
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        customer.creditRating === 'AAA' ? 'bg-green-100 text-green-800' :
-                        customer.creditRating === 'AA' ? 'bg-blue-100 text-blue-800' :
-                        customer.creditRating === 'A' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {customer.creditRating}
+                    <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">
+                      <span className={`px-2 py-1 rounded-full text-xs ...`}>
+                        {getCreditRatingLabel(customer.creditRating)}
                       </span>
                     </TableCell>
                     {/* <TableCell>{formatDate(customer.createdAt)}</TableCell> */}

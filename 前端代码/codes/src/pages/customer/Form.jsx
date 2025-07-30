@@ -11,6 +11,10 @@ import { Plus, X, Upload, FileText } from 'lucide-react';
 import { validatePhone } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
 import { useState } from 'react'; // 新增
+import { REGION_OPTIONS, INDUSTRY_OPTIONS } from '@/constants/options';
+import SearchableSelect from '@/components/SearchableSelect';
+import { CREDIT_RATING_OPTIONS } from '@/constants/options';
+import { useToast } from '@/components/ui/use-toast';
 
 // 表单验证规则
 const formSchema = z.object({
@@ -71,16 +75,16 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
   const onSubmit = async (data) => {
     try {
       let response;
-
-      if (!initialData) {
-        // 新建客户：POST /customer/create
+      let isCreate = !initialData;
+      if (isCreate) {
+        // 新建客户
         response = await fetch('/api/customer/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
       } else {
-        // 修改客户：PUT /customer/update/:id
+        // 修改客户
         response = await fetch(`/api/customer/update/${data.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -89,7 +93,14 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
       }
 
       const result = await response.json();
-      console.log(result.info, result.customer);
+      // === 新增弹窗提示 ===
+      if (result.customer && result.customer.id) {
+        window.alert(
+          `${isCreate ? '创建' : '修改'}客户 ${result.customer.id} 信息成功！`
+        );
+      } else {
+        window.alert(`${isCreate ? '创建' : '修改'}客户信息成功！`);
+      }
       onSuccess();
     } catch (error) {
       console.error('提交失败:', error);
@@ -99,6 +110,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
   
   const [contactOptions, setContactOptions] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleContactSearch = async (keyword) => {
     setSearchLoading(true);
@@ -229,11 +241,16 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="华东">华东</SelectItem>
+                      {/* <SelectItem value="华东">华东</SelectItem>
                         <SelectItem value="华北">华北</SelectItem>
                         <SelectItem value="华南">华南</SelectItem>
                         <SelectItem value="华中">华中</SelectItem>
-                        <SelectItem value="西南">西南</SelectItem>
+                        <SelectItem value="西南">西南</SelectItem> */}
+                        {REGION_OPTIONS.map((option) => (
+                          <SelectItem key={option.code} value={option.code}>
+                            {option.code} {option.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -256,11 +273,16 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="制造业">制造业</SelectItem>
+                       {/* <SelectItem value="制造业">制造业</SelectItem>
                         <SelectItem value="零售业">零售业</SelectItem>
                         <SelectItem value="金融业">金融业</SelectItem>
                         <SelectItem value="互联网">互联网</SelectItem>
-                        <SelectItem value="教育">教育</SelectItem>
+                        <SelectItem value="教育">教育</SelectItem> */}
+                        {INDUSTRY_OPTIONS.map((option) => (
+                          <SelectItem key={option.code} value={option.code}>
+                            {option.code} {option.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -307,23 +329,24 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                 name="creditRating"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center">
-                      信用等级 <span className="text-red-500 ml-1">*</span>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
+                    <FormLabel>信用等级*</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="请选择信用等级" />
                         </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="AAA">AAA</SelectItem>
-                        <SelectItem value="AA">AA</SelectItem>
-                        <SelectItem value="A">A</SelectItem>
-                        <SelectItem value="BBB">BBB</SelectItem>
-                        <SelectItem value="BB">BB</SelectItem>
-                      </SelectContent>
-                    </Select>
+                        <SelectContent>
+                          {CREDIT_RATING_OPTIONS.map(option => (
+                            <SelectItem key={option.code} value={option.code}>
+                              {option.code} {option.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -466,7 +489,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                     name={`contacts.${index}.email`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>邮箱</FormLabel>
+                        <FormLabel className="flex items-center">邮箱</FormLabel>
                         <FormControl>
                           <Input placeholder="邮箱地址" {...field} />
                         </FormControl>

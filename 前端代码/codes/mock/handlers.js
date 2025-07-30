@@ -1,7 +1,9 @@
 import { rest } from 'msw';
+import { REGION_OPTIONS, INDUSTRY_OPTIONS } from '../src/constants/options';
+import SearchableSelect from '@/components/SearchableSelect';
 import ordersData from './orders.json';
 import inquiriesData from './inquiries.json';
-
+import { CREDIT_RATING_OPTIONS } from '../src/constants/options';
 
 function formatMinutesAgo(minutes) {
   return `${minutes}分钟前`;
@@ -20,12 +22,14 @@ let customerData = Array.from({ length: 45 }, (_, i) => {
   return {
     id,
     name: `客户${i + 1}`,
-    region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
-    industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
+    // region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
+    // industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
+    region: REGION_OPTIONS[i % REGION_OPTIONS.length].code,
+    industry: INDUSTRY_OPTIONS[i % INDUSTRY_OPTIONS.length].code,
     company: `公司${i + 1}`,
     phone: `138${10000000 + i}`,
     contact: allContacts[i % allContacts.length].name,
-    creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
+    creditRating: CREDIT_RATING_OPTIONS[i % CREDIT_RATING_OPTIONS.length].code,
     address: `地址${i + 1}`,
     createdAt: new Date().toISOString(),
     modifiedAt: new Date().toISOString(),
@@ -47,11 +51,13 @@ export const handlers = [
     const name = url.searchParams.get('name') || '';
     const region = url.searchParams.get('region') || '';
     const industry = url.searchParams.get('industry') || '';
+    const creditRating = url.searchParams.get('creditRating') || '';
 
     let filtered = customerData.filter(c =>
       c.name.includes(name) &&
-      (!region || c.region === region) &&
-      (!industry || c.industry === industry)
+      (!region || region === 'all' || c.region === region) &&
+      (!industry || industry === 'all' || c.industry === industry) &&
+      (!creditRating || creditRating === 'all' || c.creditRating === creditRating)
     );
 
     const pageCount = Math.ceil(filtered.length / pageSize);
