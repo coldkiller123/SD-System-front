@@ -12,45 +12,112 @@ import { formatDate } from '@/lib/utils';
 import CustomerForm from './Form.jsx';
 
 // 模拟API获取客户数据
+// const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
+//   // 模拟API延迟
+//   await new Promise(resolve => setTimeout(resolve, 500));
+  
+//   // 模拟数据
+//   const allCustomers = Array.from({ length: 85 }, (_, i) => ({
+//     id: `C${1000 + i}`,
+//     name: `客户${i + 1}`,
+//     region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
+//     industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
+//     contact: `联系人${i + 1}`,
+//     phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
+//     // address: `地址${i + 1}`,
+//     // 新增
+//     company: `公司${i + 1}`,
+//     creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
+//     // createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString()
+//   }));
+
+//   // 应用筛选
+//   let filtered = allCustomers;
+//   if (filters.name) {
+//     filtered = filtered.filter(c => c.name.includes(filters.name));
+//   }
+//   if (filters.region && filters.region !== 'all') {
+//     filtered = filtered.filter(c => c.region === filters.region);
+//   }
+//   if (filters.industry && filters.industry !== 'all') {
+//     filtered = filtered.filter(c => c.industry === filters.industry);
+//   }
+
+//   // 分页
+//   const start = pageIndex * pageSize;
+//   const end = start + pageSize;
+//   const pageCount = Math.ceil(filtered.length / pageSize);
+  
+//   return {
+//     customers: filtered.slice(start, end),
+//     total: filtered.length,
+//     pageCount
+//   };
+// };
+
+// const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
+//   const queryParams = new URLSearchParams({
+//     pageIndex: String(pageIndex),
+//     pageSize: String(pageSize),
+//     name: filters.name || '',
+//     region: filters.region || '',
+//     industry: filters.industry || ''
+//   });
+
+//   const res = await fetch(`/api/customer/list?${queryParams}`);
+//   const json = await res.json();
+//   return json.data;
+// };
+// // 测试！fetchCustomers只负责请求和获取数据，筛选和分页参数会通过URL传递给后端，由后端返回已经筛选和分页好的数据。
+
+
+// const CustomerList = () => {
+//   const [pageIndex, setPageIndex] = useState(0);
+//   const [filters, setFilters] = useState({
+//     name: '',
+//     region: '',
+//     industry: ''
+//   });
+//   const [isFormOpen, setIsFormOpen] = useState(false);
+//   const [editingCustomer, setEditingCustomer] = useState(null);
+//   const pageSize = 10;
+
+//   const { data, isLoading, isError, refetch } = useQuery({
+//     queryKey: ['customers', pageIndex, filters],
+//     queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
+//   });
+
+//   const handleFilterChange = (key, value) => {
+//     setFilters(prev => ({ ...prev, [key]: value }));
+//     setPageIndex(0);
+//   };
+
+//   const handleEdit = (customer) => {
+//     setEditingCustomer(customer);
+//     setIsFormOpen(true);
+//   };
+
+//   const handleFormSuccess = () => {
+//     setIsFormOpen(false);
+//     setEditingCustomer(null);
+//     refetch();
+//   };
+
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+import { getCustomerList } from '@/apis/main';
+
 const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // 模拟数据
-  const allCustomers = Array.from({ length: 85 }, (_, i) => ({
-    id: `C${1000 + i}`,
-    name: `客户${i + 1}`,
-    region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
-    industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
-    contact: `联系人${i + 1}`,
-    phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
-    address: `地址${i + 1}`,
-    creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
-    createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString()
-  }));
+  const response = await getCustomerList({
+    pageIndex: pageIndex + 1,
+    pageSize,
+    name: filters.name || '',
+    region: filters.region || '',
+    industry: filters.industry || ''
+  });
 
-  // 应用筛选
-  let filtered = allCustomers;
-  if (filters.name) {
-    filtered = filtered.filter(c => c.name.includes(filters.name));
-  }
-  if (filters.region && filters.region !== 'all') {
-    filtered = filtered.filter(c => c.region === filters.region);
-  }
-  if (filters.industry && filters.industry !== 'all') {
-    filtered = filtered.filter(c => c.industry === filters.industry);
-  }
-
-  // 分页
-  const start = pageIndex * pageSize;
-  const end = start + pageSize;
-  const pageCount = Math.ceil(filtered.length / pageSize);
-  
-  return {
-    customers: filtered.slice(start, end),
-    total: filtered.length,
-    pageCount
-  };
+  return response.data;
 };
 
 const CustomerList = () => {
@@ -60,18 +127,24 @@ const CustomerList = () => {
     region: '',
     industry: ''
   });
+  // 新增：用于临时存储输入框内容
+  const [inputValue, setInputValue] = useState(''); 
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
-  const pageSize = 10;
+  const pageSize = 10; // 每页条数，可根据需求修改
 
+  // 使用React Query调用API
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['customers', pageIndex, filters],
-    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
+    //  queryKey包含所有影响数据的参数，确保参数变化时重新请求
+    queryKey: ['customers', pageIndex, pageSize, filters],
+    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters }),
+    staleTime: 1000 * 60 * 1 // 1分钟缓存，减少重复请求
   });
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPageIndex(0);
+    setPageIndex(0); // 筛选条件变化时重置到第一页
   };
 
   const handleEdit = (customer) => {
@@ -82,11 +155,27 @@ const CustomerList = () => {
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     setEditingCustomer(null);
-    refetch();
+    refetch(); // 新增/编辑成功后刷新列表
   };
 
+  // 加载状态处理
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+  // 错误状态处理
+  if (isError) return (
+    <div className="text-center py-10 text-red-500">
+      加载数据失败
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="ml-2" 
+        onClick={() => refetch()}
+      >
+        重试
+      </Button>
+    </div>
+  );
+  // 防止数据未加载时的报错（安全处理）
+  if (!data) return null;
 
   return (
     <div className="space-y-6">
@@ -110,34 +199,62 @@ const CustomerList = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                placeholder="搜索客户名称" 
-                className="pl-10"
-                value={filters.name}
-                onChange={(e) => handleFilterChange('name', e.target.value)}
-              />
+                <Input 
+                  placeholder="搜索客户名称" 
+                  className="pl-10"
+                  // 输入框的值通过临时变量控制（不直接绑定 filters.name）
+                  value={inputValue}
+                  // 输入时只更新临时变量，不影响 filters
+                  onChange={(e) => setInputValue(e.target.value)}
+                  // 按下 Enter 时同步到 filters 并搜索
+                  onKeyDown={(e) => {
+                    if (e.keyCode === 13) {
+                      e.preventDefault();
+                      // 将输入的内容同步到 filters.name
+                      setFilters(prev => ({ ...prev, name: inputValue }));
+                      setPageIndex(0);
+                      refetch();
+                      // 可选：清空输入框
+                      // setInputValue('');
+                    }
+                  }}
+                />
             </div>
             
             <Select 
               value={filters.region} 
               onValueChange={(value) => handleFilterChange('region', value)}
+              onOpenChange={(open) => {
+                if (open) {
+                  setFilters(prev => ({ ...prev, name: inputValue }));
+                  setPageIndex(0);
+                  refetch();
+                }
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="选择地区" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部地区</SelectItem>
-                <SelectItem value="华东">华东</SelectItem>
-                <SelectItem value="华北">华北</SelectItem>
-                <SelectItem value="华南">华南</SelectItem>
-                <SelectItem value="华中">华中</SelectItem>
-                <SelectItem value="西南">西南</SelectItem>
+                <SelectItem value="华东地区">华东</SelectItem>
+                <SelectItem value="华北地区">华北</SelectItem>
+                <SelectItem value="华南地区">华南</SelectItem>
+                <SelectItem value="华中地区">华中</SelectItem>
+                <SelectItem value="西南地区">西南</SelectItem>
               </SelectContent>
             </Select>
             
             <Select 
               value={filters.industry} 
               onValueChange={(value) => handleFilterChange('industry', value)}
+              onOpenChange={(open) => {
+                if (open) {
+                  setFilters(prev => ({ ...prev, name: inputValue }));
+                  setPageIndex(0);
+                  refetch();
+                }
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="选择行业" />
@@ -165,11 +282,12 @@ const CustomerList = () => {
                   <TableHead className="text-blue-800">客户名称</TableHead>
                   <TableHead className="text-blue-800">所在地区</TableHead>
                   <TableHead className="text-blue-800">所属行业</TableHead>
-                  <TableHead className="text-blue-800">主要联系人</TableHead>
+                  <TableHead className="text-blue-800 w-[100px]">所属公司</TableHead>
                   <TableHead className="text-blue-800">联系电话</TableHead>
+                  <TableHead className="text-blue-800">联系人</TableHead>
                   <TableHead className="text-blue-800">信用等级</TableHead>
-                  <TableHead className="text-blue-800">创建时间</TableHead>
-                  <TableHead className="text-right text-blue-800">操作</TableHead>
+                  {/* <TableHead className="text-blue-800">创建时间</TableHead> */}
+                  <TableHead className="text-blue-800 pl-6">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -179,8 +297,10 @@ const CustomerList = () => {
                     <TableCell>{customer.name}</TableCell>
                     <TableCell>{customer.region}</TableCell>
                     <TableCell>{customer.industry}</TableCell>
-                    <TableCell>{customer.contact}</TableCell>
+                    <TableCell>{customer.company}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
+                    <TableCell>{customer.contact || customer.contacts?.[0]?.name || '—'}</TableCell>
+                    {/* 返回联系人下拉框数组中的姓名 */}
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         customer.creditRating === 'AAA' ? 'bg-green-100 text-green-800' :
@@ -191,7 +311,7 @@ const CustomerList = () => {
                         {customer.creditRating}
                       </span>
                     </TableCell>
-                    <TableCell>{formatDate(customer.createdAt)}</TableCell>
+                    {/* <TableCell>{formatDate(customer.createdAt)}</TableCell> */}
                     <TableCell className="text-right">
                       <Button 
                         variant="ghost" 
@@ -217,7 +337,7 @@ const CustomerList = () => {
           </div>
           
           <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 whitespace-nowrap">
               显示 {pageIndex * pageSize + 1} - {Math.min((pageIndex + 1) * pageSize, data.total)} 条，共 {data.total} 条记录
             </div>
             

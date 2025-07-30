@@ -1,45 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Search, Check, X, PackagePlus, Package } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Search, X, PackagePlus, Package } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-// 模拟API获取未发货订单
-const fetchUnshippedOrders = async () => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // 模拟数据 - 状态为"未发货"的订单
-  return Array.from({ length: 15 }, (_, i) => ({
-    id: `SO${2000 + i}`,
-    customerId: `C${1500 + (i % 10)}`,
-    customerName: `客户${1500 + (i % 10)}`,
-    productName: `商品${i + 1}`,
-    quantity: Math.floor(1 + Math.random() * 100),
-    orderDate: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)).toISOString(),
-    amount: Math.floor(1000 + Math.random() * 9000),
-    status: '未发货'
-  }));
+// 获取未发货订单API
+const fetchUnshippedOrders = async ({ page, pageSize, search }) => {
+  const params = new URLSearchParams();
+  if (page !== undefined) params.append('page', page - 1); // API页码从0开始
+  if (pageSize !== undefined) params.append('page_size', pageSize);
+  if (search) params.append('search', search);
+
+  const res = await fetch(`/api/orders/unshipped?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new Error('获取未发货订单失败');
+  }
+  const data = await res.json();
+  if (data.code !== 200) {
+    throw new Error(data.message || '获取未发货订单失败');
+  }
+  // 适配字段
+  return {
+    total: data.data.total,
+    page: data.data.page,
+    pageSize: data.data.page_size,
+    orders: data.data.orders.map(order => ({
+      id: order.id,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      productName: order.productName,
+      quantity: order.quantity,
+      orderDate: order.createdAt,
+      amount: order.totalAmount,
+      status: order.status,
+    })),
+  };
 };
 
-// 模拟创建发货单API
-const createDeliveryOrder = async (orderIds, remarks) => {
-  // 模拟API延迟
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // 在实际应用中，这里会调用后端API创建发货单
-  return {
-    deliveryOrderId: `DO${Math.floor(1000 + Math.random() * 9000)}`,
-    orderIds,
-    remarks,
-    deliveryTime: new Date().toISOString(),
-    warehouseManager: '当前用户'
-  };
+// 创建发货单API
+const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, warehouseManager }) => {
+  const res = await fetch('/api/delivery-orders', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      order_ids: orderIds,
+      remarks,
+      deliveryDate,
+      warehouseManager,
+    }),
+  });
+  const data = await res.json();
+  if (res.ok && data.code === 200) {
+    return data;
+  } else if (data && data.error) {
+    const err = new Error(data.error);
+    err.status = data.status;
+    throw err;
+  } else {
+    throw new Error(data.message || '创建发货单失败');
+  }
+};
+
+const getCurrentUserName = () => {
+  // TODO: 替换为实际登录用户
+  return 'warehouse';
 };
 
 const GenerateDeliveryOrder = () => {
@@ -47,26 +85,84 @@ const GenerateDeliveryOrder = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [remarks, setRemarks] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [page, setPage] = useState(1); // 当前页码
+  const pageSize = 10; // 每页显示条数
   const navigate = useNavigate();
 
-  const { data: orders, isLoading, isError, refetch } = useQuery({
-    queryKey: ['unshippedOrders'],
-    queryFn: fetchUnshippedOrders
+  // 新增：用于缓存所有已选订单的详细信息（跨页）
+  const selectedOrderMapRef = useRef({}); // { [orderId]: orderDetail }
+
+  // 查询未发货订单
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    error,
+  } = useQuery({
+    queryKey: ['unshippedOrders', page, pageSize, searchTerm],
+    queryFn: () => fetchUnshippedOrders({ page, pageSize, search: searchTerm }),
+    keepPreviousData: true,
   });
 
+  // 订单列表
+  const orders = data?.orders || [];
+  const totalRecords = data?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const pagedOrders = orders;
+
+  // 搜索时重置到第一页
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
+
+  // 新增：每次orders变化时，把当前页中已选中的订单信息补充进缓存
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+    setTimeout(() => {
+      // 延迟以确保selectedOrders已更新
+      selectedOrders.forEach(orderId => {
+        if (!selectedOrderMapRef.current[orderId]) {
+          const found = orders.find(o => o.id === orderId);
+          if (found) {
+            selectedOrderMapRef.current[orderId] = found;
+          }
+        }
+      });
+    }, 0);
+    // eslint-disable-next-line
+  }, [orders, selectedOrders]);
+
   const toggleOrderSelection = (orderId) => {
-    if (selectedOrders.includes(orderId)) {
-      setSelectedOrders(selectedOrders.filter(id => id !== orderId));
-    } else {
-      setSelectedOrders([...selectedOrders, orderId]);
-    }
+    setSelectedOrders((prev) => {
+      if (prev.includes(orderId)) {
+        // 取消选中时也从缓存中移除
+        const newSelected = prev.filter((id) => id !== orderId);
+        // 不移除缓存，保留历史信息，便于后续优化（如撤销等）
+        return newSelected;
+      } else {
+        // 新增选中时，补充缓存
+        const found = orders.find((o) => o.id === orderId);
+        if (found) {
+          selectedOrderMapRef.current[orderId] = found;
+        }
+        return [...prev, orderId];
+      }
+    });
   };
 
   const toggleSelectAll = () => {
-    if (selectedOrders.length === orders?.length) {
-      setSelectedOrders([]);
+    const pageOrderIds = pagedOrders.map((order) => order.id);
+    const allSelected = pageOrderIds.every((id) => selectedOrders.includes(id));
+    if (allSelected) {
+      setSelectedOrders((prev) => prev.filter((id) => !pageOrderIds.includes(id)));
+      // 不移除缓存，保留历史信息
     } else {
-      setSelectedOrders(orders?.map(order => order.id) || []);
+      // 新增选中时，补充缓存
+      pagedOrders.forEach(order => {
+        selectedOrderMapRef.current[order.id] = order;
+      });
+      setSelectedOrders((prev) => Array.from(new Set([...prev, ...pageOrderIds])));
     }
   };
 
@@ -75,39 +171,59 @@ const GenerateDeliveryOrder = () => {
     
     setIsCreating(true);
     try {
-      const result = await createDeliveryOrder(selectedOrders, remarks);
-      console.log('发货单创建成功:', result);
-      
-      // 在实际应用中，这里会更新订单状态为"已生成发货单"
-      // 并导航到发货单详情页或显示成功消息
+      const deliveryDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const warehouseManager = getCurrentUserName();
+      const result = await createDeliveryOrder({
+        orderIds: selectedOrders,
+        remarks,
+        deliveryDate,
+        warehouseManager,
+      });
       alert(`发货单 ${result.deliveryOrderId} 创建成功！`);
-      
-      // 重置选择
       setSelectedOrders([]);
       setRemarks('');
-      
-      // 刷新订单列表
+      // 清空缓存
+      selectedOrderMapRef.current = {};
       refetch();
     } catch (error) {
-      console.error('创建发货单失败:', error);
-      alert('创建发货单失败，请重试');
+      if (error.status === 400) {
+        alert(error.message || '暂不可发货，库存不足等待补货');
+      } else if (error.status === 401) {
+        alert('未授权操作，请重新登录');
+        // navigate('/login'); // 可选
+      } else {
+        alert(error.message || '创建发货单失败，请重试');
+      }
     } finally {
       setIsCreating(false);
     }
   };
 
-  const filteredOrders = orders?.filter(order => 
-    order.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.productName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  
+
+  // 预览区选中订单详情（跨页缓存）
+  const selectedOrderDetails = useMemo(() => {
+    if (!selectedOrders.length) return [];
+    // 优先从缓存中取，缓存没有的再从当前页orders中找
+    return selectedOrders
+      .map(orderId => {
+        return (
+          selectedOrderMapRef.current[orderId] ||
+          orders.find(o => o.id === orderId) ||
+          null
+        );
+      })
+      .filter(Boolean);
+  }, [selectedOrders, orders]);
+
 
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+  if (isError) return <div className="text-center py-10 text-red-500">{error?.message || '加载数据失败'}</div>;
 
   return (
     <div className="space-y-6">
-      <Card className="border border-blue-100">
+      {/* 发货单生成卡片，去除底部后适当减小padding */}
+      <Card className="border border-blue-100 max-w-5xl mx-auto">
         <CardHeader className="bg-blue-50">
           <CardTitle className="flex items-center justify-between">
             <span className="text-blue-800">生成发货单</span>
@@ -115,6 +231,19 @@ const GenerateDeliveryOrder = () => {
               <span className="text-sm text-gray-600">
                 已选择 {selectedOrders.length} 个订单
               </span>
+              {/* 取消选择按钮，放到顶部 */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-blue-300 text-blue-600"
+                onClick={() => {
+                  setSelectedOrders([]);
+                  selectedOrderMapRef.current = {};
+                }}
+                disabled={selectedOrders.length === 0}
+              >
+                <X className="mr-2 h-4 w-4" /> 取消选择
+              </Button>
               <Button 
                 size="sm" 
                 className="bg-blue-600 hover:bg-blue-700"
@@ -128,13 +257,16 @@ const GenerateDeliveryOrder = () => {
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="relative md:col-span-2">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            
+            <div className="relative md:col-span-2 flex items-center">
+              <span className="absolute left-3">
+                <Search className="h-4 w-4 text-gray-400" />
+              </span>
               <Input 
                 placeholder="搜索订单号、客户名称或商品名称..." 
-                className="pl-10"
+                className="pl-10 h-12" // 保持左侧内边距
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -146,7 +278,8 @@ const GenerateDeliveryOrder = () => {
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 maxLength={200}
-                className="pr-16"
+                className="pr-16 h-12 resize-none" // 统一高度，禁止缩放
+                style={{ minHeight: '3rem', maxHeight: '3rem' }} // 3rem约等于h-12
               />
               <span className="absolute right-3 bottom-2 text-xs text-gray-500">
                 {remarks.length}/200
@@ -162,7 +295,10 @@ const GenerateDeliveryOrder = () => {
                     <input 
                       type="checkbox" 
                       className="h-4 w-4 rounded text-blue-600"
-                      checked={selectedOrders.length === orders?.length && orders.length > 0}
+                      checked={
+                        pagedOrders.length > 0 &&
+                        pagedOrders.every(order => selectedOrders.includes(order.id))
+                      }
                       onChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -176,82 +312,110 @@ const GenerateDeliveryOrder = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders?.map((order) => (
-                  <TableRow 
-                    key={order.id} 
-                    className="hover:bg-blue-50 cursor-pointer"
-                    onClick={() => toggleOrderSelection(order.id)}
-                  >
-                    <TableCell>
-                      <input 
-                        type="checkbox" 
-                        className="h-4 w-4 rounded text-blue-600"
-                        checked={selectedOrders.includes(order.id)}
-                        onChange={() => toggleOrderSelection(order.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.customerName}</TableCell>
-                    <TableCell>{order.productName}</TableCell>
-                    <TableCell>{order.quantity}</TableCell>
-                    <TableCell>¥{order.amount.toLocaleString()}</TableCell>
-                    <TableCell>{formatDate(order.orderDate)}</TableCell>
-                    <TableCell>
-                      <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                        {order.status}
-                      </span>
+                {pagedOrders.length > 0 ? (
+                  pagedOrders.map((order) => (
+                    <TableRow 
+                      key={order.id} 
+                      className="hover:bg-blue-50 cursor-pointer"
+                      onClick={() => toggleOrderSelection(order.id)}
+                    >
+                      <TableCell>
+                        {/* 单个订单复选框 */}
+                        <input 
+                          type="checkbox" 
+                          className="h-4 w-4 rounded text-blue-600"
+                          checked={selectedOrders.includes(order.id)}
+                          onChange={() => toggleOrderSelection(order.id)}
+                          onClick={(e) => e.stopPropagation()} // 阻止冒泡，避免触发行点击
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{order.id}</TableCell>
+                      <TableCell>{order.customerName}</TableCell>
+                      <TableCell>{order.productName}</TableCell>
+                      <TableCell>{order.quantity}</TableCell>
+                      <TableCell>¥{order.amount?.toLocaleString?.() ?? order.amount}</TableCell>
+                      <TableCell>{formatDate(order.orderDate)}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                          {order.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <div className="text-center py-10">
+                        <Package className="h-12 w-12 mx-auto text-gray-400" />
+                        <h3 className="mt-4 text-lg font-medium">未找到已付款订单</h3>
+                        <p className="mt-1 text-gray-600">所有订单已发货或没有符合条件的订单</p>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
           
-          {filteredOrders?.length === 0 && (
-            <div className="text-center py-10">
-              <Package className="h-12 w-12 mx-auto text-gray-400" />
-              <h3 className="mt-4 text-lg font-medium">未找到未发货订单</h3>
-              <p className="mt-1 text-gray-600">所有订单已发货或没有符合条件的订单</p>
+          {/* 分页按钮 */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                共 {totalRecords} 条记录，第 {page} / {totalPages} 页
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-600"
+                  disabled={page === 1}
+                  onClick={() => setPage(1)}
+                >
+                  首页
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-600"
+                  disabled={page === 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  上一页
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-600"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  下一页
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-600"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(totalPages)}
+                >
+                  末页
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
         
-        <CardFooter className="bg-blue-50 border-t border-blue-100 py-3">
-          <div className="flex items-center justify-between w-full">
-            <div className="text-sm text-gray-600">
-              共 {filteredOrders?.length || 0} 条记录
-            </div>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                className="border-blue-300 text-blue-600"
-                onClick={() => setSelectedOrders([])}
-                disabled={selectedOrders.length === 0}
-              >
-                <X className="mr-2 h-4 w-4" /> 取消选择
-              </Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={handleCreateDeliveryOrder}
-                disabled={selectedOrders.length === 0 || isCreating}
-              >
-                <PackagePlus className="mr-2 h-4 w-4" /> 
-                {isCreating ? '创建中...' : '创建发货单'}
-              </Button>
-            </div>
-          </div>
-        </CardFooter>
       </Card>
       
-      <Card className="border border-blue-100">
+      <Card className="border border-blue-100 max-w-5xl mx-auto">
         <CardHeader className="bg-blue-50">
           <CardTitle className="text-blue-800">发货单信息预览</CardTitle>
         </CardHeader>
         <CardContent>
           {selectedOrders.length > 0 ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 发货单基本信息区域，整体下移 */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">发货单状态</label>
                   <div className="px-3 py-2 bg-blue-50 rounded-md border border-blue-100">
@@ -267,7 +431,7 @@ const GenerateDeliveryOrder = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">仓库管理员</label>
                   <div className="px-3 py-2 bg-blue-50 rounded-md border border-blue-100">
-                    当前用户
+                    {getCurrentUserName()}
                   </div>
                 </div>
               </div>
@@ -292,17 +456,14 @@ const GenerateDeliveryOrder = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-blue-100">
-                      {selectedOrders.map(orderId => {
-                        const order = orders?.find(o => o.id === orderId);
-                        return order ? (
-                          <tr key={orderId}>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm">{order.id}</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm">{order.customerName}</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm">{order.productName}</td>
-                            <td className="px-4 py-2 whitespace-nowrap text-sm">{order.quantity}</td>
-                          </tr>
-                        ) : null;
-                      })}
+                      {selectedOrderDetails.map(order => (
+                        <tr key={order.id}>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm">{order.id}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm">{order.customerName}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm">{order.productName}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm">{order.quantity}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
