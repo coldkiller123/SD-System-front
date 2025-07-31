@@ -138,6 +138,13 @@ export const createOrder = async (orderData) => {
 
 
 /**
+ * 编辑销售订单
+ * @param {string} id - 订单编号（必填）
+ * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ */
+
+
+/**
  * 获取销售订单详情（含操作历史）
  * @param {string} id - 订单编号（必填）
  * @returns {Promise} - 包含订单详情和操作历史的响应数据
@@ -152,3 +159,26 @@ export const getOrderDetail = async (id) => {
   console.log('客户详情数据：', response.data); 
   return response;
 };
+
+
+/**
+ * 询价单列表
+ * @param {string} id - 订单编号（必填）
+ * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ */
+
+
+/**
+ * 更新询价单状态
+ * @param {string} id - 订单编号（必填）
+ * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ */
+
+/**
+ * 创建询价单
+ * @param {string} id - 订单编号（必填）
+ * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ */
+
+//HYN
+
