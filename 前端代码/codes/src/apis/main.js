@@ -92,6 +92,35 @@ export const generateInvoice = async (orderId) => {
 
 
 //ZLC
+
+/**
+ * 获取客户列表（用于客户搜索选择器）
+ * @returns {Promise} - 包含客户ID和名称的数组
+ */
+export const getCustomers = async () => {
+  const response = await request.get('/customer/customers');
+  return response; // 直接返回客户数组（[{id, name}, ...]）
+};
+
+
+
+
+/**
+ * 获取商品列表（支持搜索筛选）
+ * @param {string} [keyword] - 搜索关键词（商品名称或ID）
+ * @returns {Promise} - 商品数组，包含id、name、price、stock、description
+ */
+export const getProducts = async (keyword = '') => {
+  // 构建查询参数
+  const params = new URLSearchParams();
+  if (keyword) params.append('keyword', keyword);
+  
+  const response = await request.get(`/api/products${params.toString() ? `?${params.toString()}` : ''}`);
+  return response;
+};
+
+
+
 /**
  * 获取订单列表（支持分页和多条件筛选）
  * @param {Object} params - 请求参数
@@ -137,11 +166,20 @@ export const createOrder = async (orderData) => {
 };
 
 
-/**
- * 编辑销售订单
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
- */
+
+
+// 更新销售订单
+export const updateOrder = async (id, data) => {
+  try {
+    const response = await request.put(`/api/orders/${id}`, data);
+    return response;
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || '更新订单失败';
+    throw new Error(errorMsg);
+  }
+};
+
+
 
 
 /**
@@ -159,6 +197,8 @@ export const getOrderDetail = async (id) => {
   console.log('客户详情数据：', response.data); 
   return response;
 };
+
+
 
 
 /**
