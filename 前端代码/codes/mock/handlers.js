@@ -11,10 +11,9 @@ function formatMinutesAgo(minutes) {
 
 // ===== 客户管理数据源 =====
 const allContacts = [
-  { id: 'CT1', name: '张三', position: '经理', phone: '13811112222', email: 'zhangsan@example.com' },
-  { id: 'CT2', name: '张伟', position: '主任', phone: '13822223333', email: 'zhangwei@example.com' },
-  { id: 'CT3', name: '李四', position: '主管', phone: '13911112222', email: 'lisi@example.com' },
-  { id: 'CT4', name: '王五', position: '工程师', phone: '13711112222', email: 'wangwu@example.com' }
+  { id: 'CT1', name: '销售小孙', position: '销售代表', phone: '13811112222', email: 'xiaosun@example.com' },
+  { id: 'CT2', name: '销售小何', position: '销售代表', phone: '13822223333', email: 'xiaohe@example.com' },
+  { id: 'CT3', name: '销售组长凝凝子', position: '销售经理', phone: '13911112222', email: 'ningningzi@example.com' }
 ];
 
 let customerData = Array.from({ length: 45 }, (_, i) => {
@@ -28,7 +27,7 @@ let customerData = Array.from({ length: 45 }, (_, i) => {
     industry: INDUSTRY_OPTIONS[i % INDUSTRY_OPTIONS.length].code,
     company: `公司${i + 1}`,
     phone: `138${10000000 + i}`,
-    contact: allContacts[i % allContacts.length].name,
+    // contact: allContacts[i % allContacts.length].name,
     creditRating: CREDIT_RATING_OPTIONS[i % CREDIT_RATING_OPTIONS.length].code,
     address: `地址${i + 1}`,
     createdAt: new Date().toISOString(),
