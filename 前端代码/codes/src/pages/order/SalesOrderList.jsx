@@ -65,7 +65,7 @@ import SalesOrderForm from './SalesOrderForm.jsx';
 import { getOrders } from '@/apis/main';
 
 const SalesOrderList = () => {
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(1);
   const [filters, setFilters] = useState({
     orderId: '',
     customerName: '',
@@ -88,7 +88,7 @@ const { data, isLoading, isError, refetch } = useQuery({
 });
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPageIndex(0); // 筛选条件变化时重置页码
+    setPageIndex(1); // 筛选条件变化时重置页码
   };
 
   const handleEdit = (order) => {
@@ -105,7 +105,10 @@ const { data, isLoading, isError, refetch } = useQuery({
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
-  return (
+  const startItem = (pageIndex - 1) * pageSize + 1;
+  const endItem = Math.min(pageIndex * pageSize, data?.total || 0);
+
+  return(
     <div className="space-y-6">
       <Card className="border border-blue-100">
         <CardHeader className="bg-blue-50">
@@ -183,53 +186,54 @@ const { data, isLoading, isError, refetch } = useQuery({
                 </TableRow>
               </TableHeader>
               <TableBody>
-  {(data?.orders ?? []).map((order) => (
-    <TableRow key={order.id} className="hover:bg-blue-50">
-      <TableCell className="font-medium">{order.id}</TableCell>
-      <TableCell>{order.customerName}</TableCell>
-      <TableCell>{order.productName}</TableCell>
-      <TableCell>{order.quantity}</TableCell>
-      <TableCell>¥{order.totalAmount.toLocaleString()}</TableCell>
-      <TableCell>¥{order.paidAmount.toLocaleString()}</TableCell>
-      <TableCell>
-        <span className={`px-2 py-0.5 rounded-full text-xs ${
-          order.status === '已完成' ? 'bg-green-100 text-green-800' :
-          order.status === '已发货' ? 'bg-blue-100 text-blue-800' :
-          order.status === '已付款' ? 'bg-yellow-100 text-yellow-800' :
-          order.status === '待付款' ? 'bg-gray-100 text-gray-800' :
-          'bg-red-100 text-red-800'
-        }`}>
-          {order.status}
-        </span>
-      </TableCell>
-      <TableCell>{formatDate(order.createdAt)}</TableCell>
-      <TableCell className="text-right">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          className="text-blue-600 hover:bg-blue-100"
-          onClick={() => window.location.href = `#/order/detail/${order.id}`}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon"
-          className="text-blue-600 hover:bg-blue-100 ml-1"
-          onClick={() => handleEdit(order)}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </TableCell>
-    </TableRow>
-  ))}
+                {(data?.orders ?? []).map((order) => (
+                  <TableRow key={order.id} className="hover:bg-blue-50">
+                    <TableCell className="font-medium">{order.id}</TableCell>
+                    <TableCell>{order.customerName}</TableCell>
+                    <TableCell>{order.productName}</TableCell>
+                    <TableCell>{order.quantity}</TableCell>
+                    <TableCell>¥{order.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell>¥{order.paidAmount.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        order.status === '已完成' ? 'bg-green-100 text-green-800' :
+                        order.status === '已发货' ? 'bg-blue-100 text-blue-800' :
+                        order.status === '已付款' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === '待付款' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>{formatDate(order.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-blue-600 hover:bg-blue-100"
+                        onClick={() => window.location.href = `#/order/detail/${order.id}`}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-blue-600 hover:bg-blue-100 ml-1"
+                        onClick={() => handleEdit(order)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
           
           <div className="mt-6 flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              显示 {pageIndex * pageSize + 1} - {Math.min((pageIndex + 1) * pageSize, data.total)} 条，共 {data.total} 条记录
+              {/* 显示范围计算修改 */}
+              显示 {startItem} - {endItem} 条，共 {data?.total || 0} 条记录
             </div>
             
             <Pagination>
@@ -239,15 +243,17 @@ const { data, isLoading, isError, refetch } = useQuery({
                     href="#" 
                     onClick={(e) => {
                       e.preventDefault();
-                      if (pageIndex > 0) setPageIndex(pageIndex - 1);
+                      if (pageIndex > 1) setPageIndex(pageIndex - 1); // 最小页码为1
                     }}
-                    disabled={pageIndex === 0}
+                    disabled={pageIndex === 1} // 第一页时禁用
                   />
                 </PaginationItem>
                 
-                {Array.from({ length: Math.min(5, data.pageCount) }, (_, i) => {
-                  const page = i + Math.max(0, Math.min(pageIndex - 2, data.pageCount - 5));
-                  if (page >= data.pageCount) return null;
+                {/* 页码生成逻辑修改 */}
+                {Array.from({ length: Math.min(5, data?.pageCount || 0) }, (_, i) => {
+                  // 计算显示的页码，确保在有效范围内
+                  const page = i + Math.max(1, Math.min(pageIndex - 2, (data?.pageCount || 0) - 5));
+                  if (page > (data?.pageCount || 0)) return null;
                   
                   return (
                     <PaginationItem key={page}>
@@ -259,7 +265,7 @@ const { data, isLoading, isError, refetch } = useQuery({
                           setPageIndex(page);
                         }}
                       >
-                        {page + 1}
+                        {page} {/* 直接显示页码（已从1开始） */}
                       </PaginationLink>
                     </PaginationItem>
                   );
@@ -270,9 +276,9 @@ const { data, isLoading, isError, refetch } = useQuery({
                     href="#" 
                     onClick={(e) => {
                       e.preventDefault();
-                      if (pageIndex < data.pageCount - 1) setPageIndex(pageIndex + 1);
+                      if (pageIndex < (data?.pageCount || 0)) setPageIndex(pageIndex + 1);
                     }}
-                    disabled={pageIndex === data.pageCount - 1}
+                    disabled={pageIndex === (data?.pageCount || 0)}
                   />
                 </PaginationItem>
               </PaginationContent>

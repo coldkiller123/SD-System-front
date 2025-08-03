@@ -287,16 +287,15 @@ const CustomerDetail = () => {
                         <label className="text-sm font-medium text-gray-500">电子邮箱</label>
                         <p className="mt-1">{customer.contacts[0].email}</p>
                       </div>
-                      <div className="flex space-x-2 pt-2">
+                      {/* <div className="flex space-x-2 pt-2">
                         <Button variant="outline" size="sm" className="border-blue-300 text-blue-600">
                           <Link to="/customer/list">编辑
                           </Link>
-                          {/* 新增 */}
                         </Button>
-                        {/* <Button variant="destructive" size="sm">
+                        <Button variant="destructive" size="sm">
                           <Trash2 className="h-4 w-4 mr-1" /> 删除
-                        </Button> */}
-                      </div>
+                        </Button>
+                      </div> */}
                     </CardContent>
                   </Card>
                 )}
