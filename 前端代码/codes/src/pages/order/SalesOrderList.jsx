@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Search, Plus, Filter, Download, Eye, Pencil } from 'lucide-react';
+import { Search, Plus, Filter, Download, Eye, Pencil, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import SalesOrderForm from './SalesOrderForm.jsx';
 
@@ -67,28 +67,66 @@ import { getOrders } from '@/apis/main';
 const SalesOrderList = () => {
   const [pageIndex, setPageIndex] = useState(1);
   const [filters, setFilters] = useState({
-    orderId: '',
-    customerName: '',
+    search: '',
     status: 'all' // 默认显示全部状态
   });
+  // 搜索输入框内容
+  const [searchInput, setSearchInput] = useState('');
+  const inputRef = useRef(null);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
 
   const pageSize = 10;
 
-const { data, isLoading, isError, refetch } = useQuery({
-  queryKey: ['salesOrders', pageIndex, pageSize, filters],
-  queryFn: () => getOrders({ 
-    pageIndex,
-    pageSize,
-    orderId: filters.orderId,
-    customerName: filters.customerName,
-    status: filters.status !== 'all' ? filters.status : undefined
-  })
-});
+// 查询时只传递search和status
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['salesOrders', pageIndex, pageSize, filters],
+    queryFn: () => getOrders({ 
+      pageIndex,
+      pageSize,
+      search: filters.search,
+      status: filters.status !== 'all' ? filters.status : undefined
+    })
+  });
+
+  // 统一处理筛选条件变化
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPageIndex(1); // 筛选条件变化时重置页码
+  };
+
+  // 搜索按钮点击或回车时触发搜索
+  const handleSearch = () => {
+    if (filters.search !== searchInput) {
+      setFilters(prev => ({ ...prev, search: searchInput }));
+      setPageIndex(1);
+    }
+  };
+
+  // 清空搜索
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setFilters(prev => ({ ...prev, search: '' }));
+    setPageIndex(1);
+    inputRef.current && inputRef.current.focus();
+  };
+
+  // 输入框回车事件
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // 输入框内容变化
+  const handleInputChange = (e) => {
+    setSearchInput(e.target.value);
+    // 如果清空内容，自动刷新为全部
+    if (e.target.value === '') {
+      setFilters(prev => ({ ...prev, search: '' }));
+      setPageIndex(1);
+    }
   };
 
   const handleEdit = (order) => {
@@ -128,24 +166,40 @@ const { data, isLoading, isError, refetch } = useQuery({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                placeholder="搜索订单ID" 
-                className="pl-10"
-                value={filters.orderId}
-                onChange={(e) => handleFilterChange('orderId', e.target.value)}
-              />
-            </div>
-            
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                placeholder="搜索客户名称" 
-                className="pl-10"
-                value={filters.customerName}
-                onChange={(e) => handleFilterChange('customerName', e.target.value)}
-              />
+            {/* 搜索按钮移到搜索框左侧（外面） */}
+            <div className="flex items-center md:col-span-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="mr-2 text-blue-600 hover:bg-blue-100"
+                onClick={handleSearch}
+                tabIndex={0}
+                aria-label="搜索"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <div className="relative flex-1">
+                <Input
+                  ref={inputRef}
+                  placeholder="搜索订单号或客户名称"
+                  className="pr-8"
+                  value={searchInput}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
+                  autoComplete="off"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={handleClearSearch}
+                    tabIndex={-1}
+                    aria-label="清空"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             
             <Select 

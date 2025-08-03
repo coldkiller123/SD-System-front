@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Search, Plus, Filter, Download, Eye, Pencil } from 'lucide-react';
+import { Search, Plus, Filter, Download, Eye, Pencil, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { REGION_OPTIONS, INDUSTRY_OPTIONS, getRegionLabel, getIndustryLabel } from '@/constants/options';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -88,11 +88,52 @@ const CustomerList = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const pageSize = 10;
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['customers', pageIndex, filters],
-    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
-  });
+  // 搜索框相关逻辑
+  const [searchInput, setSearchInput] = useState('');
+  const inputRef = useRef(null);
 
+  // 搜索按钮点击或回车时触发搜索
+  const handleSearch = () => {
+    if (filters.name !== searchInput) {
+      setFilters(prev => ({ ...prev, name: searchInput }));
+      setPageIndex(0);
+    }
+  };
+
+  // 清空搜索
+  const handleClearSearch = () => {
+    setSearchInput('');
+    if (filters.name !== '') {
+      setFilters(prev => ({ ...prev, name: '' }));
+      setPageIndex(0);
+    }
+    // 自动聚焦
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  // 输入框变化
+  const handleInputChange = (e) => {
+    setSearchInput(e.target.value);
+    // 如果清空，自动刷新
+    if (e.target.value === '') {
+      if (filters.name !== '') {
+        setFilters(prev => ({ ...prev, name: '' }));
+        setPageIndex(0);
+      }
+    }
+  };
+
+  // 回车搜索
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
+  // 其他筛选项变化
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPageIndex(0);
@@ -108,6 +149,11 @@ const CustomerList = () => {
     setEditingCustomer(null);
     refetch();
   };
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['customers', pageIndex, filters],
+    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
+  });
 
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
@@ -203,30 +249,39 @@ const CustomerList = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input 
-                  placeholder="搜索客户名称" 
-                  className="pl-10"
-                  // // 输入框的值通过临时变量控制（不直接绑定 filters.name）
-                  // value={inputValue}
-                  // // 输入时只更新临时变量，不影响 filters
-                  // onChange={(e) => setInputValue(e.target.value)}
-                  // // 按下 Enter 时同步到 filters 并搜索
-                  // onKeyDown={(e) => {
-                  //   if (e.keyCode === 13) {
-                  //     e.preventDefault();
-                  //     // 将输入的内容同步到 filters.name
-                  //     setFilters(prev => ({ ...prev, name: inputValue }));
-                  //     setPageIndex(0);
-                  //     refetch();
-                  //     // 可选：清空输入框
-                  //     // setInputValue('');
-                  //   }
-                  // }} JSX后端测试！！！
-                  value={filters.name}
-                  onChange={(e) => handleFilterChange('name', e.target.value)}
+            <div className="flex items-center">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="mr-2 text-blue-600 hover:bg-blue-100"
+                onClick={handleSearch}
+                tabIndex={0}
+                aria-label="搜索"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <div className="relative flex-1">
+                <Input
+                  ref={inputRef}
+                  placeholder="搜索客户名称"
+                  className="pr-8"
+                  value={searchInput}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
+                  autoComplete="off"
                 />
+                {searchInput && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={handleClearSearch}
+                    tabIndex={-1}
+                    aria-label="清空"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             
             <Select 
