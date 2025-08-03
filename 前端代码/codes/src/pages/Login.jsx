@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { sendEmailVerificationCode, verifyEmailCode } from '@/services/email';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -72,11 +73,11 @@ const Login = () => {
 
   // 模拟用户角色数据
   const mockUsers = {
-    'sales': { password: 'sales123', role: '销售代表', name: '销售小孙' },
-    'manager': { password: 'manager123', role: '销售经理', name: '销售组长凝凝子' },
-    'warehouse': { password: 'warehouse123', role: '仓库管理员', name: '炼乳会' },
-    'finance': { password: 'finance123', role: '财务人员', name: '缰绳喜' },
-    'admin': { password: 'admin123', role: '系统管理员', name: 'codekiller神' }
+    'sales': { password: 'sales123', role: '销售代表', name: '销售小张' },
+    'manager': { password: 'manager123', role: '销售经理', name: '李经理' },
+    'warehouse': { password: 'warehouse123', role: '仓库管理员', name: '王仓库' },
+    'finance': { password: 'finance123', role: '财务人员', name: '赵财务' },
+    'admin': { password: 'admin123', role: '系统管理员', name: '系统管理员' }
   };
 
   const handleLogin = async (e) => {
@@ -166,7 +167,7 @@ const Login = () => {
   };
 
   // 忘记密码 - 下一步
-  const handleForgotNext = () => {
+  const handleForgotNext = async () => {
     if (forgotStep === 1) {
       // 验证用户名是否存在
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
@@ -207,7 +208,7 @@ const Login = () => {
       if (verificationMethod === 'email') {
         setForgotStep(4);
         // 模拟发送验证码
-        sendEmailCode();
+        await sendEmailCode();
         return;
       }
     }
@@ -226,11 +227,22 @@ const Login = () => {
     }
     
     if (forgotStep === 4) {
-      // 验证邮箱验证码 (这里简化处理，实际应该验证真实验证码)
-      if (emailCode === '123456') {
-        setForgotStep(5);
-      } else {
-        toast.error('验证码错误');
+      // 验证邮箱验证码
+      try {
+        const result = await verifyEmailCode({
+          email: userEmail,
+          code: emailCode,
+          username: forgotUsername
+        });
+        
+        if (result.success) {
+          setForgotStep(5);
+          toast.success('邮箱验证成功');
+        } else {
+          toast.error(result.message || '验证码错误');
+        }
+      } catch (error) {
+        toast.error(error.message || '验证失败');
       }
       return;
     }
@@ -266,13 +278,23 @@ const Login = () => {
   };
 
   // 发送邮箱验证码
-  const sendEmailCode = () => {
-    // 模拟发送验证码
-    setTimeout(() => {
-      setEmailSent(true);
-      setEmailCountdown(60); // 设置60秒倒计时
-      toast.success('验证码已发送至您的邮箱');
-    }, 1000);
+  const sendEmailCode = async () => {
+    try {
+      const result = await sendEmailVerificationCode({
+        email: userEmail,
+        username: forgotUsername
+      });
+      
+      if (result.success) {
+        setEmailSent(true);
+        setEmailCountdown(60); // 设置60秒倒计时
+        toast.success(result.message || '验证码已发送至您的邮箱');
+      } else {
+        toast.error(result.message || '发送验证码失败');
+      }
+    } catch (error) {
+      toast.error(error.message || '发送验证码失败');
+    }
   };
 
   // 忘记密码 - 上一步
