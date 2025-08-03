@@ -109,27 +109,20 @@ export const handlers = [
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get('page') || '0');
     const pageSize = parseInt(url.searchParams.get('page_size') || '10');
-    const search = url.searchParams.get('search') || '';
+    const search = (url.searchParams.get('search') || '').trim();
 
-    // 固定总订单数为85
-    const totalOrders = 85; 
-    
-    // 计算当前页实际应返回的数据量
-    const startIndex = page * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalOrders);
-    const currentPageSize = endIndex - startIndex;
-
-    // 生成当前页数据
-    const orders = Array.from({ length: currentPageSize }, (_, i) => {
-      const globalIndex = startIndex + i; // 全局索引
-      const orderId = `SO${5000 + globalIndex}`;
-      const customerId = `C${2000 + (globalIndex % 15)}`;
-      
+    // 生成全部未发货订单的模拟数据（固定85条）
+    const totalOrders = 85;
+    const allOrders = Array.from({ length: totalOrders }, (_, i) => {
+      const orderId = `SO${5000 + i}`;
+      const customerId = `C${2000 + (i % 15)}`;
+      const customerName = `客户${customerId.substring(1)}`;
+      const productName = `商品${(i % 50) + 1}`;
       return {
         id: orderId,
         customerId,
-        customerName: `客户${customerId.substring(1)}`,
-        productName: `商品${Math.floor(Math.random() * 50)}`,
+        customerName,
+        productName,
         quantity: Math.floor(1 + Math.random() * 20),
         createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         totalAmount: Math.floor(500 + Math.random() * 5000),
@@ -137,13 +130,30 @@ export const handlers = [
       };
     });
 
+    // 搜索逻辑：支持订单号、客户名称、商品名称模糊匹配
+    let filteredOrders = allOrders;
+    if (search) {
+      filteredOrders = allOrders.filter(order => {
+        return (
+          order.id.includes(search) ||
+          order.customerName.includes(search) ||
+          order.productName.includes(search)
+        );
+      });
+    }
+
+    const total = filteredOrders.length;
+    const startIndex = page * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+    const orders = filteredOrders.slice(startIndex, endIndex);
+
     return res(
       ctx.status(200),
       ctx.json({
         code: 200,
         message: "成功",
         data: {
-          total: totalOrders, // 总订单数85
+          total,
           page,
           page_size: pageSize,
           orders

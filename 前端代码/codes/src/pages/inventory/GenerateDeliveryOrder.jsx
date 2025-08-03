@@ -221,15 +221,28 @@ import { useNavigate } from 'react-router-dom';
 //   if (isError) return <div className="text-center py-10 text-red-500">{error?.message || '加载数据失败'}</div>;
 
 // 导入封装好的接口（替换原来的 fetch 实现）
-import { fetchUnshippedOrders, createDeliveryOrder } from '@/apis/main';
+import { fetchUnshippedOrders as rawFetchUnshippedOrders, createDeliveryOrder } from '@/apis/main';
 
 const getCurrentUserName = () => {
   // 实际项目中替换为登录用户信息（如从 localStorage 中获取）
   return 'warehouse';
 };
 
+// 包装fetchUnshippedOrders，自动将前端页码(page, 从1开始)转为后端页码(从0开始)
+const fetchUnshippedOrders = ({ page, pageSize, search }) => {
+  // page: 前端从1开始，后端从0开始
+  return rawFetchUnshippedOrders({
+    page: page - 1,
+    pageSize,
+    search,
+  });
+};
+
 const GenerateDeliveryOrder = () => {
   const [selectedOrders, setSelectedOrders] = useState([]);
+  // 新增：用于输入框的受控值
+  const [searchInput, setSearchInput] = useState('');
+  // 新增：实际用于查询的searchTerm
   const [searchTerm, setSearchTerm] = useState('');
   const [remarks, setRemarks] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -266,6 +279,17 @@ const GenerateDeliveryOrder = () => {
   useEffect(() => {
     setPage(1);
   }, [searchTerm]);
+
+  // 监听searchInput变化，如果变为空字符串则自动刷新为全部数据
+  useEffect(() => {
+    if (searchInput === '') {
+      // 只有当searchTerm不是空时才需要刷新
+      if (searchTerm !== '') {
+        setSearchTerm('');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
 
   // 缓存当前页选中的订单信息
   useEffect(() => {
@@ -401,16 +425,44 @@ const GenerateDeliveryOrder = () => {
         <CardContent className="pt-6 pb-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             
-            <div className="relative md:col-span-2 flex items-center">
-              <span className="absolute left-3">
-                <Search className="h-4 w-4 text-gray-400" />
-              </span>
-              <Input 
-                placeholder="搜索订单号、客户名称或商品名称..." 
-                className="pl-10 h-12" // 保持左侧内边距
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="relative md:col-span-2 flex items-center space-x-2">
+              {/* 搜索按钮图标，放在搜索框左边外面 */}
+              <button
+                type="button"
+                aria-label="搜索"
+                className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                style={{ minWidth: 40, minHeight: 40 }}
+                onClick={() => setSearchTerm(searchInput)}
+              >
+                <Search className="h-5 w-5" />
+              </button>
+              <div className="relative flex-1">
+                <Input 
+                  placeholder="搜索订单号、客户名称或商品名称..." 
+                  className="h-12"
+                  value={searchInput}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      setSearchTerm(searchInput);
+                    }
+                  }}
+                />
+                {/* 清除按钮 */}
+                {searchInput && (
+                  <button
+                    type="button"
+                    aria-label="清除"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    style={{ padding: 0, background: 'none', border: 'none', lineHeight: 0 }}
+                    onClick={() => setSearchInput('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             
             <div className="relative">
