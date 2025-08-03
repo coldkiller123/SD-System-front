@@ -6,11 +6,13 @@ import { useState, useEffect } from "react";
 import { navItems, customerDetailRoutes, orderDetailRoutes } from "./nav-items";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import CustomerDetail from "./pages/customer/Detail.jsx";
 import SalesOrderDetail from "./pages/order/SalesOrderDetail.jsx";
 import SalesOrderForm from "./pages/order/SalesOrderForm.jsx";
 import InvoiceManagement from "./pages/finance/InvoiceManagement.jsx";
 import { usePermission } from "./hooks/usePermission";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const queryClient = new QueryClient();
 
@@ -70,67 +72,70 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <HashRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <MainLayout />
-                </ProtectedRoute>
-              }
-            >
-              {allRoutes.map(({ to, page }) => (
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <TooltipProvider>
+          <Toaster />
+          <HashRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                {allRoutes.map(({ to, page }) => (
+                  <Route 
+                    key={to} 
+                    path={to} 
+                    element={
+                      <PermissionRoute path={to}>
+                        {page}
+                      </PermissionRoute>
+                    } 
+                  />
+                ))}
                 <Route 
-                  key={to} 
-                  path={to} 
+                  path="/customer/detail/:id" 
                   element={
-                    <PermissionRoute path={to}>
-                      {page}
+                    <PermissionRoute path="/customer">
+                      <CustomerDetail />
                     </PermissionRoute>
                   } 
                 />
-              ))}
-              <Route 
-                path="/customer/detail/:id" 
-                element={
-                  <PermissionRoute path="/customer">
-                    <CustomerDetail />
-                  </PermissionRoute>
-                } 
-              />
-              <Route 
-                path="/order/detail/:id" 
-                element={
-                  <PermissionRoute path="/order">
-                    <SalesOrderDetail />
-                  </PermissionRoute>
-                } 
-              />
-              <Route 
-                path="/order/sales/edit/:id" 
-                element={
-                  <PermissionRoute path="/order">
-                    <SalesOrderForm />
-                  </PermissionRoute>
-                } 
-              />
-              <Route 
-                path="/finance/invoice-management" 
-                element={
-                  <PermissionRoute path="/finance">
-                    <InvoiceManagement />
-                  </PermissionRoute>
-                } 
-              />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </HashRouter>
-      </TooltipProvider>
+                <Route 
+                  path="/order/detail/:id" 
+                  element={
+                    <PermissionRoute path="/order">
+                      <SalesOrderDetail />
+                    </PermissionRoute>
+                  } 
+                />
+                <Route 
+                  path="/order/sales/edit/:id" 
+                  element={
+                    <PermissionRoute path="/order">
+                      <SalesOrderForm />
+                    </PermissionRoute>
+                  } 
+                />
+                <Route 
+                  path="/finance/invoice-management" 
+                  element={
+                    <PermissionRoute path="/finance">
+                      <InvoiceManagement />
+                    </PermissionRoute>
+                  } 
+                />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </HashRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
