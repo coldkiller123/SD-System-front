@@ -135,7 +135,7 @@ export const Sidebar = ({ isOpen, toggleSidebar, theme }) => {
       </nav>
       
       <div className={`p-4 ${borderClass} text-center text-sm ${copyrightClass}`}>
-        {isOpen ? "© 2023 SD销售分发系统" : "SD"}
+        {isOpen ? "© 2025 SD销售分发系统" : "SD"}
       </div>
     </div>
   );
