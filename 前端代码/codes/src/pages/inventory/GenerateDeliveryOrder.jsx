@@ -9,74 +9,222 @@ import { Search, X, PackagePlus, Package } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
-// 获取未发货订单API
-const fetchUnshippedOrders = async ({ page, pageSize, search }) => {
-  const params = new URLSearchParams();
-  if (page !== undefined) params.append('page', page - 1); // API页码从0开始
-  if (pageSize !== undefined) params.append('page_size', pageSize);
-  if (search) params.append('search', search);
+// // 获取未发货订单API
+// const fetchUnshippedOrders = async ({ page, pageSize, search }) => {
+//   const params = new URLSearchParams();
+//   if (page !== undefined) params.append('page', page - 1); // API页码从0开始
+//   if (pageSize !== undefined) params.append('page_size', pageSize);
+//   if (search) params.append('search', search);
 
-  const res = await fetch(`/api/orders/unshipped?${params.toString()}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    throw new Error('获取未发货订单失败');
-  }
-  const data = await res.json();
-  if (data.code !== 200) {
-    throw new Error(data.message || '获取未发货订单失败');
-  }
-  // 适配字段
-  return {
-    total: data.data.total,
-    page: data.data.page,
-    pageSize: data.data.page_size,
-    orders: data.data.orders.map(order => ({
-      id: order.id,
-      customerId: order.customerId,
-      customerName: order.customerName,
-      productName: order.productName,
-      quantity: order.quantity,
-      orderDate: order.createdAt,
-      amount: order.totalAmount,
-      status: order.status,
-    })),
-  };
-};
+//   const res = await fetch(`/api/orders/unshipped?${params.toString()}`, {
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     credentials: 'include',
+//   });
+//   if (!res.ok) {
+//     throw new Error('获取未发货订单失败');
+//   }
+//   const data = await res.json();
+//   if (data.code !== 200) {
+//     throw new Error(data.message || '获取未发货订单失败');
+//   }
+//   // 适配字段
+//   return {
+//     total: data.data.total,
+//     page: data.data.page,
+//     pageSize: data.data.page_size,
+//     orders: data.data.orders.map(order => ({
+//       id: order.id,
+//       customerId: order.customerId,
+//       customerName: order.customerName,
+//       productName: order.productName,
+//       quantity: order.quantity,
+//       orderDate: order.createdAt,
+//       amount: order.totalAmount,
+//       status: order.status,
+//     })),
+//   };
+// };
 
-// 创建发货单API
-const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, warehouseManager }) => {
-  const res = await fetch('/api/delivery-orders', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({
-      order_ids: orderIds,
-      remarks,
-      deliveryDate,
-      warehouseManager,
-    }),
-  });
-  const data = await res.json();
-  if (res.ok && data.code === 200) {
-    return data;
-  } else if (data && data.error) {
-    const err = new Error(data.error);
-    err.status = data.status;
-    throw err;
-  } else {
-    throw new Error(data.message || '创建发货单失败');
-  }
-};
+// // 创建发货单API
+// const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, warehouseManager }) => {
+//   const res = await fetch('/api/delivery-orders', {
+//     method: 'POST',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     credentials: 'include',
+//     body: JSON.stringify({
+//       order_ids: orderIds,
+//       remarks,
+//       deliveryDate,
+//       warehouseManager,
+//     }),
+//   });
+//   const data = await res.json();
+//   if (res.ok && data.code === 200) {
+//     return data;
+//   } else if (data && data.error) {
+//     const err = new Error(data.error);
+//     err.status = data.status;
+//     throw err;
+//   } else {
+//     throw new Error(data.message || '创建发货单失败');
+//   }
+// };
+
+// const getCurrentUserName = () => {
+//   // TODO: 替换为实际登录用户
+//   return 'warehouse';
+// };
+
+// const GenerateDeliveryOrder = () => {
+//   const [selectedOrders, setSelectedOrders] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [remarks, setRemarks] = useState('');
+//   const [isCreating, setIsCreating] = useState(false);
+//   const [page, setPage] = useState(1); // 当前页码
+//   const pageSize = 10; // 每页显示条数
+//   const navigate = useNavigate();
+
+//   // 新增：用于缓存所有已选订单的详细信息（跨页）
+//   const selectedOrderMapRef = useRef({}); // { [orderId]: orderDetail }
+
+//   // 查询未发货订单
+//   const {
+//     data,
+//     isLoading,
+//     isError,
+//     refetch,
+//     error,
+//   } = useQuery({
+//     queryKey: ['unshippedOrders', page, pageSize, searchTerm],
+//     queryFn: () => fetchUnshippedOrders({ page, pageSize, search: searchTerm }),
+//     keepPreviousData: true,
+//   });
+
+//   // 订单列表
+//   const orders = data?.orders || [];
+//   const totalRecords = data?.total || 0;
+//   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+//   const pagedOrders = orders;
+
+//   // 搜索时重置到第一页
+//   useEffect(() => {
+//     setPage(1);
+//   }, [searchTerm]);
+
+//   // 新增：每次orders变化时，把当前页中已选中的订单信息补充进缓存
+//   useEffect(() => {
+//     if (!orders || orders.length === 0) return;
+//     setTimeout(() => {
+//       // 延迟以确保selectedOrders已更新
+//       selectedOrders.forEach(orderId => {
+//         if (!selectedOrderMapRef.current[orderId]) {
+//           const found = orders.find(o => o.id === orderId);
+//           if (found) {
+//             selectedOrderMapRef.current[orderId] = found;
+//           }
+//         }
+//       });
+//     }, 0);
+//     // eslint-disable-next-line
+//   }, [orders, selectedOrders]);
+
+//   const toggleOrderSelection = (orderId) => {
+//     setSelectedOrders((prev) => {
+//       if (prev.includes(orderId)) {
+//         // 取消选中时也从缓存中移除
+//         const newSelected = prev.filter((id) => id !== orderId);
+//         // 不移除缓存，保留历史信息，便于后续优化（如撤销等）
+//         return newSelected;
+//       } else {
+//         // 新增选中时，补充缓存
+//         const found = orders.find((o) => o.id === orderId);
+//         if (found) {
+//           selectedOrderMapRef.current[orderId] = found;
+//         }
+//         return [...prev, orderId];
+//       }
+//     });
+//   };
+
+//   const toggleSelectAll = () => {
+//     const pageOrderIds = pagedOrders.map((order) => order.id);
+//     const allSelected = pageOrderIds.every((id) => selectedOrders.includes(id));
+//     if (allSelected) {
+//       setSelectedOrders((prev) => prev.filter((id) => !pageOrderIds.includes(id)));
+//       // 不移除缓存，保留历史信息
+//     } else {
+//       // 新增选中时，补充缓存
+//       pagedOrders.forEach(order => {
+//         selectedOrderMapRef.current[order.id] = order;
+//       });
+//       setSelectedOrders((prev) => Array.from(new Set([...prev, ...pageOrderIds])));
+//     }
+//   };
+
+//   const handleCreateDeliveryOrder = async () => {
+//     if (selectedOrders.length === 0) return;
+    
+//     setIsCreating(true);
+//     try {
+//       const deliveryDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+//       const warehouseManager = getCurrentUserName();
+//       const result = await createDeliveryOrder({
+//         orderIds: selectedOrders,
+//         remarks,
+//         deliveryDate,
+//         warehouseManager,
+//       });
+//       alert(`发货单 ${result.deliveryOrderId} 创建成功！`);
+//       setSelectedOrders([]);
+//       setRemarks('');
+//       // 清空缓存
+//       selectedOrderMapRef.current = {};
+//       refetch();
+//     } catch (error) {
+//       if (error.status === 400) {
+//         alert(error.message || '暂不可发货，库存不足等待补货');
+//       } else if (error.status === 401) {
+//         alert('未授权操作，请重新登录');
+//         // navigate('/login'); // 可选
+//       } else {
+//         alert(error.message || '创建发货单失败，请重试');
+//       }
+//     } finally {
+//       setIsCreating(false);
+//     }
+//   };
+
+  
+
+//   // 预览区选中订单详情（跨页缓存）
+//   const selectedOrderDetails = useMemo(() => {
+//     if (!selectedOrders.length) return [];
+//     // 优先从缓存中取，缓存没有的再从当前页orders中找
+//     return selectedOrders
+//       .map(orderId => {
+//         return (
+//           selectedOrderMapRef.current[orderId] ||
+//           orders.find(o => o.id === orderId) ||
+//           null
+//         );
+//       })
+//       .filter(Boolean);
+//   }, [selectedOrders, orders]);
+
+
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   if (isError) return <div className="text-center py-10 text-red-500">{error?.message || '加载数据失败'}</div>;
+
+// 导入封装好的接口（替换原来的 fetch 实现）
+import { fetchUnshippedOrders, createDeliveryOrder } from '@/apis/main';
 
 const getCurrentUserName = () => {
-  // TODO: 替换为实际登录用户
+  // 实际项目中替换为登录用户信息（如从 localStorage 中获取）
   return 'warehouse';
 };
 
@@ -85,14 +233,14 @@ const GenerateDeliveryOrder = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [remarks, setRemarks] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [page, setPage] = useState(1); // 当前页码
+  const [page, setPage] = useState(1); // 当前页码（前端从1开始）
   const pageSize = 10; // 每页显示条数
   const navigate = useNavigate();
 
-  // 新增：用于缓存所有已选订单的详细信息（跨页）
+  // 缓存已选订单信息（跨页保持选中状态）
   const selectedOrderMapRef = useRef({}); // { [orderId]: orderDetail }
 
-  // 查询未发货订单
+  // 查询未发货订单（使用 useQuery 调用封装的接口）
   const {
     data,
     isLoading,
@@ -101,124 +249,117 @@ const GenerateDeliveryOrder = () => {
     error,
   } = useQuery({
     queryKey: ['unshippedOrders', page, pageSize, searchTerm],
-    queryFn: () => fetchUnshippedOrders({ page, pageSize, search: searchTerm }),
-    keepPreviousData: true,
+    queryFn: () => fetchUnshippedOrders({ 
+      page, 
+      pageSize, 
+      search: searchTerm 
+    }),
+    keepPreviousData: true, // 切换页码时保留上一页数据，提升体验
   });
 
-  // 订单列表
+  // 订单列表处理
   const orders = data?.orders || [];
   const totalRecords = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const pagedOrders = orders;
 
   // 搜索时重置到第一页
   useEffect(() => {
     setPage(1);
   }, [searchTerm]);
 
-  // 新增：每次orders变化时，把当前页中已选中的订单信息补充进缓存
+  // 缓存当前页选中的订单信息
   useEffect(() => {
-    if (!orders || orders.length === 0) return;
-    setTimeout(() => {
-      // 延迟以确保selectedOrders已更新
-      selectedOrders.forEach(orderId => {
-        if (!selectedOrderMapRef.current[orderId]) {
-          const found = orders.find(o => o.id === orderId);
-          if (found) {
-            selectedOrderMapRef.current[orderId] = found;
-          }
-        }
-      });
-    }, 0);
-    // eslint-disable-next-line
-  }, [orders, selectedOrders]);
-
-  const toggleOrderSelection = (orderId) => {
-    setSelectedOrders((prev) => {
-      if (prev.includes(orderId)) {
-        // 取消选中时也从缓存中移除
-        const newSelected = prev.filter((id) => id !== orderId);
-        // 不移除缓存，保留历史信息，便于后续优化（如撤销等）
-        return newSelected;
-      } else {
-        // 新增选中时，补充缓存
-        const found = orders.find((o) => o.id === orderId);
+    if (!orders.length) return;
+    selectedOrders.forEach(orderId => {
+      if (!selectedOrderMapRef.current[orderId]) {
+        const found = orders.find(o => o.id === orderId);
         if (found) {
           selectedOrderMapRef.current[orderId] = found;
         }
+      }
+    });
+  }, [orders, selectedOrders]);
+
+  // 单选/取消订单
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrders(prev => {
+      if (prev.includes(orderId)) {
+        // 取消选中
+        return prev.filter(id => id !== orderId);
+      } else {
+        // 新增选中
         return [...prev, orderId];
       }
     });
   };
 
+  // 全选/取消全选当前页
   const toggleSelectAll = () => {
-    const pageOrderIds = pagedOrders.map((order) => order.id);
-    const allSelected = pageOrderIds.every((id) => selectedOrders.includes(id));
+    const pageOrderIds = orders.map(order => order.id);
+    const allSelected = pageOrderIds.every(id => selectedOrders.includes(id));
+    
     if (allSelected) {
-      setSelectedOrders((prev) => prev.filter((id) => !pageOrderIds.includes(id)));
-      // 不移除缓存，保留历史信息
+      // 取消当前页全选
+      setSelectedOrders(prev => prev.filter(id => !pageOrderIds.includes(id)));
     } else {
-      // 新增选中时，补充缓存
-      pagedOrders.forEach(order => {
-        selectedOrderMapRef.current[order.id] = order;
-      });
-      setSelectedOrders((prev) => Array.from(new Set([...prev, ...pageOrderIds])));
+      // 选中当前页所有订单
+      setSelectedOrders(prev => [...new Set([...prev, ...pageOrderIds])]);
     }
   };
 
+  // 创建发货单（调用封装的接口）
   const handleCreateDeliveryOrder = async () => {
-    if (selectedOrders.length === 0) return;
-    
+    if (selectedOrders.length === 0) {
+      alert('请至少选择一个订单');
+      return;
+    }
+
     setIsCreating(true);
     try {
-      const deliveryDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const deliveryDate = new Date().toISOString().slice(0, 10); // 格式：YYYY-MM-DD
       const warehouseManager = getCurrentUserName();
+      
+      // 调用创建发货单接口
       const result = await createDeliveryOrder({
         orderIds: selectedOrders,
         remarks,
         deliveryDate,
         warehouseManager,
       });
-      alert(`发货单 ${result.deliveryOrderId} 创建成功！`);
+
+      alert(`发货单创建成功！单号：${result.deliveryOrderId}`);
+      // 重置选择状态
       setSelectedOrders([]);
       setRemarks('');
-      // 清空缓存
       selectedOrderMapRef.current = {};
+      // 重新获取订单列表（状态已更新为“已发货”）
       refetch();
-    } catch (error) {
-      if (error.status === 400) {
-        alert(error.message || '暂不可发货，库存不足等待补货');
-      } else if (error.status === 401) {
+    } catch (err) {
+      // 处理错误（库存不足、未授权等）
+      if (err.response?.status === 400) {
+        alert('创建失败：库存不足，无法发货');
+      } else if (err.response?.status === 401) {
         alert('未授权操作，请重新登录');
-        // navigate('/login'); // 可选
+        navigate('/login');
       } else {
-        alert(error.message || '创建发货单失败，请重试');
+        alert(`创建失败：${err.message || '服务器错误'}`);
       }
     } finally {
       setIsCreating(false);
     }
   };
 
-  
-
-  // 预览区选中订单详情（跨页缓存）
+  // 预览选中的订单详情
   const selectedOrderDetails = useMemo(() => {
-    if (!selectedOrders.length) return [];
-    // 优先从缓存中取，缓存没有的再从当前页orders中找
     return selectedOrders
-      .map(orderId => {
-        return (
-          selectedOrderMapRef.current[orderId] ||
-          orders.find(o => o.id === orderId) ||
-          null
-        );
-      })
+      .map(orderId => selectedOrderMapRef.current[orderId] || orders.find(o => o.id === orderId))
       .filter(Boolean);
   }, [selectedOrders, orders]);
 
-
+  // 加载状态和错误状态处理
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">{error?.message || '加载数据失败'}</div>;
+  if (isError) return <div className="text-center py-10 text-red-500">{error?.message || '加载失败'}</div>;
+
 
   return (
     <div className="space-y-6">
@@ -296,8 +437,8 @@ const GenerateDeliveryOrder = () => {
                       type="checkbox" 
                       className="h-4 w-4 rounded text-blue-600"
                       checked={
-                        pagedOrders.length > 0 &&
-                        pagedOrders.every(order => selectedOrders.includes(order.id))
+                        orders.length > 0 &&
+                        orders.every(order => selectedOrders.includes(order.id))
                       }
                       onChange={toggleSelectAll}
                     />
@@ -312,8 +453,8 @@ const GenerateDeliveryOrder = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagedOrders.length > 0 ? (
-                  pagedOrders.map((order) => (
+                {orders.length > 0 ? (
+                  orders.map((order) => (
                     <TableRow 
                       key={order.id} 
                       className="hover:bg-blue-50 cursor-pointer"

@@ -318,7 +318,7 @@ const CustomerList = () => {
                   <TableHead className="text-blue-800 whitespace-nowrap">所属行业</TableHead>
                   <TableHead className="text-blue-800 w-[100px]">所属公司</TableHead>
                   <TableHead className="text-blue-800">联系电话</TableHead>
-                  <TableHead className="text-blue-800 whitespace-nowrap">联系人</TableHead>
+                  <TableHead className="text-blue-800 whitespace-nowrap w-[100px]">联系人</TableHead>
                   <TableHead className="text-blue-800 whitespace-nowrap">信用等级</TableHead>
                   {/* <TableHead className="text-blue-800">创建时间</TableHead> */}
                   <TableHead className="text-blue-800 pl-6">操作</TableHead>
@@ -333,10 +333,10 @@ const CustomerList = () => {
                     <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{getIndustryLabel(customer.industry)}</TableCell>
                     <TableCell>{customer.company}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.contact || customer.contacts?.[0]?.name || '—'}</TableCell>
+                    <TableCell>{customer.contacts?.[0]?.name || '—'}</TableCell>
                     {/* 返回联系人下拉框数组中的姓名 */}
-                    <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">
-                      <span className={`px-2 py-1 rounded-full text-xs ...`}>
+                    <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]">
+                      <span className={`px-2 py-1 rounded-full text-s ...`}>
                         {getCreditRatingLabel(customer.creditRating)}
                       </span>
                     </TableCell>

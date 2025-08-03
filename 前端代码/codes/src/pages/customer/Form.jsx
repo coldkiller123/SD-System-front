@@ -10,8 +10,17 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Plus, X, Upload, FileText } from 'lucide-react';
 import { validatePhone } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
-import { useState } from 'react'; // 新增
+import { useState, useEffect } from 'react'; // 新增
 import { REGION_OPTIONS, INDUSTRY_OPTIONS } from '@/constants/options';
+
+// 获取当前登录用户信息
+const getCurrentUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user')) || {};
+  } catch {
+    return {};
+  }
+};
 import SearchableSelect from '@/components/SearchableSelect';
 import { CREDIT_RATING_OPTIONS } from '@/constants/options';
 import { useToast } from '@/components/ui/use-toast';
@@ -39,23 +48,69 @@ const formSchema = z.object({
 });
 
 const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
+  // 获取当前登录用户信息
+  const currentUser = getCurrentUser();
+  const isSalesRep = currentUser.role === '销售代表' || currentUser.position === '销售代表';
+  const isAdminOrManager = currentUser.role === '系统管理员' || currentUser.role === '销售经理' || currentUser.position === '系统管理员' || currentUser.position === '销售经理';
+  
+  // 联系人字段是否禁用（销售代表时禁用）
+  const contactFieldsDisabled = isSalesRep;
+
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      name: '',
-      type: '',
-      region: '',
-      industry: '',
-      company: '',
-      phone: '',
-      creditRating: '',
-      address: '',
-      contacts: [
-        { name: '', position: '', phone: '', email: '' }
-      ],
-      remarks: '',
-      attachments: []
-    }
+    // defaultValues: initialData || {
+    //   name: '',
+    //   type: '',
+    //   region: '',
+    //   industry: '',
+    //   company: '',
+    //   phone: '',
+    //   creditRating: '',
+    //   address: '',
+    //   contacts: [
+    //     { name: '', position: '', phone: '', email: '' }
+    //   ],
+    //   remarks: '',
+    //   attachments: []
+    // }
+    defaultValues: initialData || (
+      isSalesRep
+        ? {
+            name: '',
+            type: '',
+            region: '',
+            industry: '',
+            company: '',
+            phone: '',
+            creditRating: '',
+            address: '',
+            contacts: [
+              {
+                name: currentUser.name || '',
+                position: currentUser.role || currentUser.position || '',
+                phone: currentUser.phone || '',
+                email: currentUser.email || ''
+              }
+            ],
+            remarks: '',
+            attachments: []
+          }
+        : {
+            name: '',
+            type: '',
+            region: '',
+            industry: '',
+            company: '',
+            phone: '',
+            creditRating: '',
+            address: '',
+            contacts: [
+              { name: '', position: '', phone: '', email: '' }
+            ],
+            remarks: '',
+            attachments: []
+          }
+    )
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -419,18 +474,22 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                             <Input
                               placeholder="请输入联系人姓名"
                               {...field}
+                              disabled={contactFieldsDisabled}
+                              className={contactFieldsDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}
                               onChange={(e) => {
-                                field.onChange(e); // 更新表单值
-                                handleContactSearch(e.target.value); // 发起搜索
+                                if (!contactFieldsDisabled) {
+                                  field.onChange(e); // 更新表单值
+                                  handleContactSearch(e.target.value); // 发起搜索
+                                }
                               }}
                               autoComplete="off"
                             />
-                            {searchLoading ? (
+                            {!contactFieldsDisabled && searchLoading ? (
                               <div className="absolute z-10 bg-white border rounded shadow mt-1 w-full px-3 py-2 text-gray-400">
                                 加载中...
                               </div>
                             ) : (
-                              contactOptions.length > 0 && (
+                              !contactFieldsDisabled && contactOptions.length > 0 && (
                                 <div className="absolute z-10 bg-white border rounded shadow mt-1 w-full max-h-48 overflow-y-auto">
                                   {contactOptions.map((contact) => (
                                     <div
@@ -461,7 +520,12 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                           职位 <span className="text-red-500 ml-1">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="职位" {...field} />
+                          <Input 
+                            placeholder="职位" 
+                            {...field} 
+                            disabled={contactFieldsDisabled}
+                            className={contactFieldsDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -477,7 +541,12 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                           手机号 <span className="text-red-500 ml-1">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="手机号码" {...field} />
+                          <Input 
+                            placeholder="手机号码" 
+                            {...field} 
+                            disabled={contactFieldsDisabled}
+                            className={contactFieldsDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -491,7 +560,12 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                       <FormItem>
                         <FormLabel className="flex items-center">邮箱</FormLabel>
                         <FormControl>
-                          <Input placeholder="邮箱地址" {...field} />
+                          <Input 
+                            placeholder="邮箱地址" 
+                            {...field} 
+                            disabled={contactFieldsDisabled}
+                            className={contactFieldsDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -516,7 +590,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         </FormItem>
                       )}
                     /> */}
-                    
+                    {/*                     
                     <Button 
                       type="button" 
                       variant="destructive" 
@@ -525,7 +599,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                       disabled={fields.length === 1}
                     >
                       <X className="h-4 w-4 mr-1" /> 删除
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               ))}
@@ -535,6 +609,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                 variant="outline" 
                 className="mt-2 border-blue-300 text-blue-600"
                 onClick={() => append({ name: '', position: '', phone: '', email: '', isPrimary: false })}
+                disabled={contactFieldsDisabled}
               >
                 <Plus className="h-4 w-4 mr-2" /> 添加联系人
               </Button>
