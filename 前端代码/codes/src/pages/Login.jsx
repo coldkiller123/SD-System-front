@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { sendEmailVerificationCode, verifyEmailCode } from '@/services/email';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -34,6 +35,8 @@ const Login = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [userEmail, setUserEmail] = useState(''); // 用于存储用户注册时的邮箱
+  const [emailCountdown, setEmailCountdown] = useState(0); // 邮箱验证码倒计时
   const navigate = useNavigate();
 
   // 生成4位数字验证码
@@ -58,6 +61,15 @@ const Login = () => {
     }
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  // 邮箱验证码倒计时
+  useEffect(() => {
+    let timer;
+    if (emailCountdown > 0) {
+      timer = setTimeout(() => setEmailCountdown(emailCountdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [emailCountdown]);
 
   // 模拟用户角色数据
   const mockUsers = {
@@ -155,7 +167,7 @@ const Login = () => {
   };
 
   // 忘记密码 - 下一步
-  const handleForgotNext = () => {
+  const handleForgotNext = async () => {
     if (forgotStep === 1) {
       // 验证用户名是否存在
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
@@ -166,6 +178,8 @@ const Login = () => {
         return;
       }
       
+      // 保存用户邮箱用于后续显示
+      setUserEmail(isRegisteredUser.email || `${forgotUsername}@example.com`);
       setForgotStep(2);
       return;
     }
@@ -194,10 +208,7 @@ const Login = () => {
       if (verificationMethod === 'email') {
         setForgotStep(4);
         // 模拟发送验证码
-        setTimeout(() => {
-          setEmailSent(true);
-          toast.success('验证码已发送至您的邮箱');
-        }, 1000);
+        await sendEmailCode();
         return;
       }
     }
@@ -216,11 +227,22 @@ const Login = () => {
     }
     
     if (forgotStep === 4) {
-      // 验证邮箱验证码 (这里简化处理，实际应该验证真实验证码)
-      if (emailCode === '123456') {
-        setForgotStep(5);
-      } else {
-        toast.error('验证码错误');
+      // 验证邮箱验证码
+      try {
+        const result = await verifyEmailCode({
+          email: userEmail,
+          code: emailCode,
+          username: forgotUsername
+        });
+        
+        if (result.success) {
+          setForgotStep(5);
+          toast.success('邮箱验证成功');
+        } else {
+          toast.error(result.message || '验证码错误');
+        }
+      } catch (error) {
+        toast.error(error.message || '验证失败');
       }
       return;
     }
@@ -255,6 +277,26 @@ const Login = () => {
     }
   };
 
+  // 发送邮箱验证码
+  const sendEmailCode = async () => {
+    try {
+      const result = await sendEmailVerificationCode({
+        email: userEmail,
+        username: forgotUsername
+      });
+      
+      if (result.success) {
+        setEmailSent(true);
+        setEmailCountdown(60); // 设置60秒倒计时
+        toast.success(result.message || '验证码已发送至您的邮箱');
+      } else {
+        toast.error(result.message || '发送验证码失败');
+      }
+    } catch (error) {
+      toast.error(error.message || '发送验证码失败');
+    }
+  };
+
   // 忘记密码 - 上一步
   const handleForgotBack = () => {
     if (forgotStep > 1) {
@@ -276,6 +318,8 @@ const Login = () => {
     setNewPassword('');
     setConfirmNewPassword('');
     setEmailSent(false);
+    setUserEmail('');
+    setEmailCountdown(0);
   };
 
   // 粒子背景组件
@@ -570,7 +614,7 @@ const Login = () => {
                 <div className="p-3 bg-blue-50 rounded-md">
                   <p className="text-sm text-gray-700">
                     验证码已发送至您的邮箱: 
-                    <span className="font-medium"> {forgotUsername}@example.com</span>
+                    <span className="font-medium"> {userEmail || `${forgotUsername}@example.com`}</span>
                   </p>
                 </div>
                 
@@ -586,18 +630,14 @@ const Login = () => {
                   />
                 </div>
                 
-                {!emailSent && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setEmailSent(true);
-                      toast.success('验证码已重新发送');
-                    }}
-                    className="w-full"
-                  >
-                    重新发送验证码
-                  </Button>
-                )}
+                <Button 
+                  variant="outline" 
+                  onClick={sendEmailCode}
+                  disabled={emailCountdown > 0}
+                  className="w-full"
+                >
+                  {emailCountdown > 0 ? `再次发送 (${emailCountdown}s)` : '再次发送验证码'}
+                </Button>
                 
                 <div className="flex justify-between">
                   <Button variant="outline" onClick={handleForgotBack}>
