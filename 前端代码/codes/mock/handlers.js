@@ -322,7 +322,7 @@ export const handlers = [
 
   rest.get('/api/orders/delivered', (req, res, ctx) => {
   const allData = Array.from({ length: 45 }, (_, i) => {
-    const hasInvoice = i > 5;
+    const hasInvoice = i > 7;
     return {
       id: `SO${3000 + i}`,
       customerId: `C${1500 + (i % 10)}`,
@@ -330,7 +330,7 @@ export const handlers = [
       amount: Math.floor(1000 + Math.random() * 9000),
       orderDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
       deliveryDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-      status: '已收货',
+      status: '已完成',
       hasInvoice,
       invoiceId: hasInvoice ? `INV${Math.floor(10000 + Math.random() * 90000)}` : null
     };
@@ -340,8 +340,8 @@ export const handlers = [
   const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
   const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
   const orderId = req.url.searchParams.get('orderId')?.trim();
-  const status = req.url.searchParams.get('status') || 'all'; // invoiced | pending | all
-
+ // const status = req.url.searchParams.get('status') || 'all'; // invoiced | pending | all
+const hasInvoiceParam = req.url.searchParams.get('hasInvoice'); 
   // 多重过滤
   let filteredData = allData;
 
@@ -351,9 +351,9 @@ export const handlers = [
     );
   }
 
-  if (status === 'invoiced') {
+   if (hasInvoiceParam === 'true') {
     filteredData = filteredData.filter(order => order.hasInvoice);
-  } else if (status === 'pending') {
+  } else if (hasInvoiceParam === 'false') {
     filteredData = filteredData.filter(order => !order.hasInvoice);
   }
 
