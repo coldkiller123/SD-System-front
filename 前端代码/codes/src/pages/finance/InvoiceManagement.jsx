@@ -491,7 +491,10 @@ const InvoiceManagement = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [pendingOrderToGenerate, setPendingOrderToGenerate] = useState(null);
+const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+
 
   const pageSize = 10;
 
@@ -507,13 +510,14 @@ const InvoiceManagement = () => {
       pageIndex,
       pageSize,
       orderId: searchTerm,
-      status: filterStatus
+      hasInvoiceParam: filterStatus
     }).then(response => {
       // 适配接口返回格式，从response中提取数据
       return {
         orders: response.data || [],
         total: response.total || 0,
-        pageCount: response.pageCount || 0
+        pageCount: response.pageCount || 0,
+        ...(filterStatus !== '' ? { hasInvoiceParam: filterStatus } : {})
       };
     }),
     keepPreviousData: true,
@@ -658,9 +662,9 @@ const InvoiceManagement = () => {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="pl-6 h-11 rounded"
               >
-                <option value="all">全部</option>
-                <option value="invoiced">已开票</option>
-                <option value="pending">待开票</option>
+                <option value="">全部</option>
+                <option value="true">已开票</option>
+                <option value="false">待开票</option>
               </select>
             </div>
           </CardHeader>
@@ -693,7 +697,7 @@ const InvoiceManagement = () => {
                       <TableCell>{order.customerName}</TableCell>
                       <TableCell>¥{order.amount.toLocaleString()}</TableCell>
                       <TableCell>{formatDate(order.deliveryDate)}</TableCell>
-                      <TableCell>
+                      <TableCell style={{ whiteSpace: 'nowrap' }} >
                         {order.hasInvoice ? (
                           <Badge className="bg-green-100 text-green-800">
                             <CheckCircle className="h-4 w-4 mr-1" /> 已开票
@@ -716,18 +720,20 @@ const InvoiceManagement = () => {
                             <FileText className="h-4 w-4 mr-1" /> 查看发票
                           </Button>
                         ) : (
-                          <Button 
+                         <Button 
                             size="sm" 
                             className="bg-blue-600 hover:bg-blue-700"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleGenerateInvoice(order);
+                              setPendingOrderToGenerate(order);  // 记录订单
+                              setIsConfirmDialogOpen(true);       // 打开确认弹窗
                             }}
                             disabled={isGenerating}
                           >
                             <FileText className="h-4 w-4 mr-1" /> 
                             {isGenerating ? '生成中...' : '生成发票'}
                           </Button>
+
                         )}
                       </TableCell>
                     </TableRow>
@@ -791,6 +797,25 @@ const InvoiceManagement = () => {
           </CardContent>
         </Card>
         
+        <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>确认生成发票？</AlertDialogTitle>
+      <AlertDialogDescription>
+        请确认是否要为订单 {pendingOrderToGenerate?.id} 生成发票。
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)}>取消</AlertDialogCancel>
+    <AlertDialogAction onClick={() => {
+      if (pendingOrderToGenerate) {
+        handleGenerateInvoice(pendingOrderToGenerate);
+      }
+      setIsConfirmDialogOpen(false);
+      setPendingOrderToGenerate(null);
+    }}>确认</AlertDialogAction>
+  </AlertDialogContent>
+</AlertDialog>
+
         {/* 右侧：发票详情 */}
         <div id="invoice-preview" className={!selectedOrder ? "hidden lg:block lg:col-span-2" : "lg:col-span-2"}>
           <Card className="border border-blue-100 h-full ">
