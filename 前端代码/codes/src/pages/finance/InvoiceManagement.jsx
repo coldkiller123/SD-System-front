@@ -521,14 +521,14 @@ const InvoiceManagement = () => {
       pageIndex,
       pageSize,
       orderId: searchTerm,
-      hasInvoiceParam: filterStatus
+      hasInvoice: filterStatus
     }).then(response => {
       // 适配接口返回格式，从response中提取数据
       return {
         orders: response.data || [],
         total: response.total || 0,
         pageCount: response.pageCount || 0,
-        ...(filterStatus !== '' ? { hasInvoiceParam: filterStatus } : {})
+        ...(filterStatus !== '' ? { hasInvoice: filterStatus } : {})
       };
     }),
     keepPreviousData: true,
