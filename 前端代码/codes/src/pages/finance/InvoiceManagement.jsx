@@ -454,7 +454,7 @@
 // export default InvoiceManagement;
 
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
@@ -490,10 +490,13 @@ const InvoiceManagement = () => {
   const [invoiceData, setInvoiceData] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
+  // 搜索相关
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const searchInputRef = useRef(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [pendingOrderToGenerate, setPendingOrderToGenerate] = useState(null);
-const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
 
   const pageSize = 10;
@@ -502,6 +505,14 @@ const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   useEffect(() => {
     setPageIndex(0);
   }, [searchTerm, filterStatus]);
+
+  // 输入框内容为空时自动刷新
+  useEffect(() => {
+    if (searchInput === '' && searchTerm !== '') {
+      setSearchTerm('');
+    }
+    // eslint-disable-next-line
+  }, [searchInput]);
 
   // 使用封装的API获取已收货订单列表
   const { data, isLoading, isError, refetch } = useQuery({
@@ -610,6 +621,27 @@ const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     }
   }, []);
 
+  // 搜索框回车或点击搜索
+  const handleSearch = () => {
+    setSearchTerm(searchInput.trim());
+  };
+
+  // 搜索框清空
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  // 回车事件
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
@@ -646,21 +678,44 @@ const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
           <CardHeader className="bg-blue-50">
             <CardTitle className="text-blue-800">待生成发票订单</CardTitle>
             {/* 搜索框 */}
-            <div className="relative md:col-span-2 flex items-center">
-    <span className="absolute left-3">
-        <Search className="h-4 w-4 text-gray-400" />
-    </span>
-    <Input
-        placeholder="搜索订单号、客户名称或商品名称..."
-        className="pl-10 h-12" // 保持左侧内边距
-        value={searchTerm}
-        // 搜索框相关：每输入一个字就会触发 setSearchTerm，进而自动搜索
-        onChange={(e) => setSearchTerm(e.target.value)}
-    />
+            <div className="flex items-center mb-4">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="mr-2 text-blue-600 hover:bg-blue-100"
+                onClick={handleSearch}
+                tabIndex={0}
+                aria-label="搜索"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <div className="relative flex-1">
+                <Input
+                  ref={searchInputRef}
+                  placeholder="搜索订单号"
+                  className="pr-8"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  autoComplete="off"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={handleClearSearch}
+                    tabIndex={-1}
+                    aria-label="清空"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="pl-6 h-11 rounded"
+                className="pl-3 h-11 rounded border border-gray-300"
+                style={{ minWidth: 100 }}
               >
                 <option value="">全部</option>
                 <option value="true">已开票</option>
@@ -695,7 +750,7 @@ const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
                     >
                       <TableCell className="font-medium">{order.id}</TableCell>
                       <TableCell>{order.customerName}</TableCell>
-                      <TableCell>¥{order.amount.toLocaleString()}</TableCell>
+                      <TableCell>¥{order.amount?.toLocaleString?.() ?? order.amount}</TableCell>
                       <TableCell>{formatDate(order.deliveryDate)}</TableCell>
                       <TableCell style={{ whiteSpace: 'nowrap' }} >
                         {order.hasInvoice ? (
@@ -745,7 +800,7 @@ const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
             {/* 分页控件 */}
             <div className="mt-6 flex items-center justify-between">
               <div className="text-sm text-gray-600">
-                显示 {pageIndex * pageSize + 1} - {Math.min((pageIndex + 1) * pageSize, data.total)} 条，共 {data.total} 条记录
+                显示 {data?.total === 0 ? 0 : pageIndex * pageSize + 1} - {Math.min((pageIndex + 1) * pageSize, data.total)} 条，共 {data.total} 条记录
               </div>
               
               <Pagination>
@@ -798,23 +853,23 @@ const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
         </Card>
         
         <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>确认生成发票？</AlertDialogTitle>
-      <AlertDialogDescription>
-        请确认是否要为订单 {pendingOrderToGenerate?.id} 生成发票。
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)}>取消</AlertDialogCancel>
-    <AlertDialogAction onClick={() => {
-      if (pendingOrderToGenerate) {
-        handleGenerateInvoice(pendingOrderToGenerate);
-      }
-      setIsConfirmDialogOpen(false);
-      setPendingOrderToGenerate(null);
-    }}>确认</AlertDialogAction>
-  </AlertDialogContent>
-</AlertDialog>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认生成发票？</AlertDialogTitle>
+              <AlertDialogDescription>
+                请确认是否要为订单 {pendingOrderToGenerate?.id} 生成发票。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (pendingOrderToGenerate) {
+                handleGenerateInvoice(pendingOrderToGenerate);
+              }
+              setIsConfirmDialogOpen(false);
+              setPendingOrderToGenerate(null);
+            }}>确认</AlertDialogAction>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* 右侧：发票详情 */}
         <div id="invoice-preview" className={!selectedOrder ? "hidden lg:block lg:col-span-2" : "lg:col-span-2"}>
