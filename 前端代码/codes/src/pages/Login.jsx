@@ -11,9 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-//import { sendEmailVerificationCode, verifyEmailCode } from '@/services/email';
+// 引入邮件相关接口
+import { sendEmailCode, verifyEmailCode, resetPassword } from '@/apis/email';
 
 const Login = () => {
+  // 登录相关状态
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [captcha, setCaptcha] = useState('');
@@ -23,6 +25,8 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  
+  // 忘记密码相关状态
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [forgotStep, setForgotStep] = useState(1); // 1: 输入用户名, 2: 验证方式, 3: 密保验证, 4: 邮箱验证, 5: 重置密码
   const [forgotUsername, setForgotUsername] = useState('');
@@ -35,23 +39,26 @@ const Login = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [userEmail, setUserEmail] = useState(''); // 用于存储用户注册时的邮箱
-  const [emailCountdown, setEmailCountdown] = useState(0); // 邮箱验证码倒计时
+  const [userEmail, setUserEmail] = useState('');
+  const [emailCountdown, setEmailCountdown] = useState(0);
+  const [requestId, setRequestId] = useState(''); // 邮件验证码相关新增状态
+  const [verifyToken, setVerifyToken] = useState(''); // 邮件验证码相关新增状态
+  
   const navigate = useNavigate();
 
-  // 生成4位数字验证码
+  // 生成4位数字验证码（保持不变）
   const generateCaptcha = () => {
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     setCaptchaCode(code);
     setCountdown(60);
   };
 
-  // 初始化验证码
+  // 初始化验证码（保持不变）
   useEffect(() => {
     generateCaptcha();
   }, []);
 
-  // 倒计时
+  // 验证码倒计时（保持不变）
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -62,7 +69,7 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // 邮箱验证码倒计时
+  // 邮箱验证码倒计时（新增）
   useEffect(() => {
     let timer;
     if (emailCountdown > 0) {
@@ -71,7 +78,7 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [emailCountdown]);
 
-  // 模拟用户角色数据
+  // 模拟用户角色数据（保持不变）
   const mockUsers = {
     'sales': { password: 'sales123', role: '销售代表', name: '销售小孙' },
     'manager': { password: 'manager123', role: '销售经理', name: '销售组长凝凝子' },
@@ -80,6 +87,7 @@ const Login = () => {
     'admin': { password: 'admin123', role: '系统管理员', name: 'codekiller神' }
   };
 
+  // 登录逻辑（完全保持不变）
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -166,10 +174,10 @@ const Login = () => {
     }, 1000);
   };
 
-  // 忘记密码 - 下一步
+  // 忘记密码 - 下一步（仅修改邮件相关逻辑）
   const handleForgotNext = async () => {
     if (forgotStep === 1) {
-      // 验证用户名是否存在
+      // 验证用户名是否存在（保持原有逻辑，不修改）
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
       const isRegisteredUser = registeredUsers[forgotUsername];
       
@@ -190,7 +198,7 @@ const Login = () => {
         return;
       }
       
-      // 如果选择密保问题，获取用户密保问题
+      // 密保问题验证（保持原有逻辑）
       if (verificationMethod === 'security') {
         const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
         const user = registeredUsers[forgotUsername];
@@ -204,17 +212,16 @@ const Login = () => {
         return;
       }
       
-      // 如果选择邮箱验证
+      // 邮箱验证（修改部分：调用邮件接口）
       if (verificationMethod === 'email') {
         setForgotStep(4);
-        // 模拟发送验证码
-        await sendEmailCode();
+        await sendEmailVerification();
         return;
       }
     }
     
     if (forgotStep === 3) {
-      // 验证密保答案
+      // 验证密保答案（保持原有逻辑）
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
       const user = registeredUsers[forgotUsername];
       
@@ -227,15 +234,17 @@ const Login = () => {
     }
     
     if (forgotStep === 4) {
-      // 验证邮箱验证码
+      // 验证邮箱验证码（修改部分：调用邮件接口）
       try {
         const result = await verifyEmailCode({
           email: userEmail,
+          username: forgotUsername,
           code: emailCode,
-          username: forgotUsername
+          requestId: requestId
         });
         
         if (result.success) {
+          setVerifyToken(result.data.token);
           setForgotStep(5);
           toast.success('邮箱验证成功');
         } else {
@@ -248,7 +257,7 @@ const Login = () => {
     }
     
     if (forgotStep === 5) {
-      // 重置密码
+      // 重置密码（保持原有逻辑，仅在邮箱验证时调用接口）
       if (!newPassword || !confirmNewPassword) {
         toast.error('请输入新密码');
         return;
@@ -264,30 +273,59 @@ const Login = () => {
         return;
       }
       
-      // 更新密码
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
-      if (registeredUsers[forgotUsername]) {
-        registeredUsers[forgotUsername].password = newPassword;
-        localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-        toast.success('密码重置成功');
-        setForgotPasswordOpen(false);
-        resetForgotForm();
+      // 区分验证方式处理（新增邮件验证后的密码重置）
+      if (verificationMethod === 'email' && verifyToken) {
+        try {
+          const result = await resetPassword({
+            token: verifyToken,
+            newPassword: newPassword,
+            confirmPassword: confirmNewPassword
+          });
+          
+          if (result.success) {
+            toast.success('密码重置成功');
+            // 更新本地存储的密码（保持与本地数据同步）
+            const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+            if (registeredUsers[forgotUsername]) {
+              registeredUsers[forgotUsername].password = newPassword;
+              localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+            }
+            setForgotPasswordOpen(false);
+            resetForgotForm();
+          } else {
+            toast.error(result.message || '密码重置失败');
+          }
+        } catch (error) {
+          toast.error(error.message || '密码重置失败');
+        }
+      } else {
+        // 密保问题验证后的密码重置（保持原有逻辑）
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+        if (registeredUsers[forgotUsername]) {
+          registeredUsers[forgotUsername].password = newPassword;
+          localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+          toast.success('密码重置成功');
+          setForgotPasswordOpen(false);
+          resetForgotForm();
+        }
       }
       return;
     }
   };
 
-  // 发送邮箱验证码
-  const sendEmailCode = async () => {
+  // 发送邮箱验证码（新增邮件相关函数）
+  const sendEmailVerification = async () => {
     try {
-      const result = await sendEmailVerificationCode({
+      const result = await sendEmailCode({
         email: userEmail,
-        username: forgotUsername
+        username: forgotUsername,
+        type: 'forgot_password'
       });
       
       if (result.success) {
+        setRequestId(result.data.requestId);
         setEmailSent(true);
-        setEmailCountdown(60); // 设置60秒倒计时
+        setEmailCountdown(60);
         toast.success(result.message || '验证码已发送至您的邮箱');
       } else {
         toast.error(result.message || '发送验证码失败');
@@ -297,7 +335,7 @@ const Login = () => {
     }
   };
 
-  // 忘记密码 - 上一步
+  // 忘记密码 - 上一步（保持不变）
   const handleForgotBack = () => {
     if (forgotStep > 1) {
       setForgotStep(forgotStep - 1);
@@ -307,7 +345,7 @@ const Login = () => {
     }
   };
 
-  // 重置忘记密码表单
+  // 重置忘记密码表单（保持不变，仅新增邮件相关状态重置）
   const resetForgotForm = () => {
     setForgotStep(1);
     setForgotUsername('');
@@ -320,9 +358,11 @@ const Login = () => {
     setEmailSent(false);
     setUserEmail('');
     setEmailCountdown(0);
+    setRequestId('');
+    setVerifyToken('');
   };
 
-  // 粒子背景组件
+  // 粒子背景组件（保持不变）
   const ParticleBackground = () => (
     <div className="absolute inset-0 overflow-hidden">
       {[...Array(20)].map((_, i) => (
@@ -347,6 +387,7 @@ const Login = () => {
     </div>
   );
 
+  // 渲染部分（保持不变，仅邮箱验证步骤UI适配）
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4 relative">
       <ParticleBackground />
@@ -614,7 +655,7 @@ const Login = () => {
                 <div className="p-3 bg-blue-50 rounded-md">
                   <p className="text-sm text-gray-700">
                     验证码已发送至您的邮箱: 
-                    <span className="font-medium"> {userEmail || `${forgotUsername}@example.com`}</span>
+                    <span className="font-medium"> {userEmail}</span>
                   </p>
                 </div>
                 
@@ -632,7 +673,7 @@ const Login = () => {
                 
                 <Button 
                   variant="outline" 
-                  onClick={sendEmailCode}
+                  onClick={sendEmailVerification}
                   disabled={emailCountdown > 0}
                   className="w-full"
                 >
@@ -715,3 +756,4 @@ const Login = () => {
 };
 
 export default Login;
+    
