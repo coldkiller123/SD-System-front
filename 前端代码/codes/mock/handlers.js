@@ -11,10 +11,9 @@ function formatMinutesAgo(minutes) {
 
 // ===== 客户管理数据源 =====
 const allContacts = [
-  { id: 'CT1', name: '张三', position: '经理', phone: '13811112222', email: 'zhangsan@example.com' },
-  { id: 'CT2', name: '张伟', position: '主任', phone: '13822223333', email: 'zhangwei@example.com' },
-  { id: 'CT3', name: '李四', position: '主管', phone: '13911112222', email: 'lisi@example.com' },
-  { id: 'CT4', name: '王五', position: '工程师', phone: '13711112222', email: 'wangwu@example.com' }
+  { id: 'CT1', name: '销售小孙', position: '销售代表', phone: '13811112222', email: 'xiaosun@example.com' },
+  { id: 'CT2', name: '销售小何', position: '销售代表', phone: '13822223333', email: 'xiaohe@example.com' },
+  { id: 'CT3', name: '销售组长凝凝子', position: '销售经理', phone: '13911112222', email: 'ningningzi@example.com' }
 ];
 
 let customerData = Array.from({ length: 45 }, (_, i) => {
@@ -28,7 +27,7 @@ let customerData = Array.from({ length: 45 }, (_, i) => {
     industry: INDUSTRY_OPTIONS[i % INDUSTRY_OPTIONS.length].code,
     company: `公司${i + 1}`,
     phone: `138${10000000 + i}`,
-    contact: allContacts[i % allContacts.length].name,
+    // contact: allContacts[i % allContacts.length].name,
     creditRating: CREDIT_RATING_OPTIONS[i % CREDIT_RATING_OPTIONS.length].code,
     address: `地址${i + 1}`,
     createdAt: new Date().toISOString(),
@@ -110,27 +109,20 @@ export const handlers = [
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get('page') || '0');
     const pageSize = parseInt(url.searchParams.get('page_size') || '10');
-    const search = url.searchParams.get('search') || '';
+    const search = (url.searchParams.get('search') || '').trim();
 
-    // 固定总订单数为85
-    const totalOrders = 85; 
-    
-    // 计算当前页实际应返回的数据量
-    const startIndex = page * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, totalOrders);
-    const currentPageSize = endIndex - startIndex;
-
-    // 生成当前页数据
-    const orders = Array.from({ length: currentPageSize }, (_, i) => {
-      const globalIndex = startIndex + i; // 全局索引
-      const orderId = `SO${5000 + globalIndex}`;
-      const customerId = `C${2000 + (globalIndex % 15)}`;
-      
+    // 生成全部未发货订单的模拟数据（固定85条）
+    const totalOrders = 85;
+    const allOrders = Array.from({ length: totalOrders }, (_, i) => {
+      const orderId = `SO${5000 + i}`;
+      const customerId = `C${2000 + (i % 15)}`;
+      const customerName = `客户${customerId.substring(1)}`;
+      const productName = `商品${(i % 50) + 1}`;
       return {
         id: orderId,
         customerId,
-        customerName: `客户${customerId.substring(1)}`,
-        productName: `商品${Math.floor(Math.random() * 50)}`,
+        customerName,
+        productName,
         quantity: Math.floor(1 + Math.random() * 20),
         createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         totalAmount: Math.floor(500 + Math.random() * 5000),
@@ -138,13 +130,30 @@ export const handlers = [
       };
     });
 
+    // 搜索逻辑：支持订单号、客户名称、商品名称模糊匹配
+    let filteredOrders = allOrders;
+    if (search) {
+      filteredOrders = allOrders.filter(order => {
+        return (
+          order.id.includes(search) ||
+          order.customerName.includes(search) ||
+          order.productName.includes(search)
+        );
+      });
+    }
+
+    const total = filteredOrders.length;
+    const startIndex = page * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+    const orders = filteredOrders.slice(startIndex, endIndex);
+
     return res(
       ctx.status(200),
       ctx.json({
         code: 200,
         message: "成功",
         data: {
-          total: totalOrders, // 总订单数85
+          total,
           page,
           page_size: pageSize,
           orders
@@ -313,7 +322,7 @@ export const handlers = [
 
   rest.get('/api/orders/delivered', (req, res, ctx) => {
   const allData = Array.from({ length: 45 }, (_, i) => {
-    const hasInvoice = i > 5;
+    const hasInvoice = i > 7;
     return {
       id: `SO${3000 + i}`,
       customerId: `C${1500 + (i % 10)}`,
@@ -321,7 +330,7 @@ export const handlers = [
       amount: Math.floor(1000 + Math.random() * 9000),
       orderDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
       deliveryDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-      status: '已收货',
+      status: '已完成',
       hasInvoice,
       invoiceId: hasInvoice ? `INV${Math.floor(10000 + Math.random() * 90000)}` : null
     };
@@ -331,8 +340,8 @@ export const handlers = [
   const pageIndex = parseInt(req.url.searchParams.get('pageIndex')) || 0;
   const pageSize = parseInt(req.url.searchParams.get('pageSize')) || 10;
   const orderId = req.url.searchParams.get('orderId')?.trim();
-  const status = req.url.searchParams.get('status') || 'all'; // invoiced | pending | all
-
+ // const status = req.url.searchParams.get('status') || 'all'; // invoiced | pending | all
+const hasInvoiceParam = req.url.searchParams.get('hasInvoice'); 
   // 多重过滤
   let filteredData = allData;
 
@@ -342,9 +351,9 @@ export const handlers = [
     );
   }
 
-  if (status === 'invoiced') {
+   if (hasInvoiceParam === 'true') {
     filteredData = filteredData.filter(order => order.hasInvoice);
-  } else if (status === 'pending') {
+  } else if (hasInvoiceParam === 'false') {
     filteredData = filteredData.filter(order => !order.hasInvoice);
   }
 
@@ -402,67 +411,57 @@ export const handlers = [
     return res(ctx.status(200), ctx.json(invoice));
   }),
     rest.get('/api/activities/latest', (req, res, ctx) => {
-    const now = new Date();
-    const data={
-    activities:[
-      {
-        title: '新客户注册',
-        description: `上海科技有限公司 - ${formatMinutesAgo(2)}`,
-        module: '客户管理',
-        color: 'blue',
-      },
-      {
-        title: '新订单创建',
-        description: `订单号：SO20241215001 - ${formatMinutesAgo(5)}`,
-        module: '销售订单',
-        color: 'green',
-      },
-      {
-        title: '发货单生成',
-        description: `发货单号：DO20241215008 - ${formatMinutesAgo(10)}`,
-        module: '发货管理',
-        color: 'purple',
-      },
-      {
-        title: '发票开具',
-        description: `发票号：INV20241215012 - ${formatMinutesAgo(15)}`,
-        module: '财务管理',
-        color: 'orange',
-      },
-    ],
-
-   stats:[
-  {
-    title: '客户总数',
-    value: '1,248',
-    icon: 'Users', // ✅ 改为字符串
-    todayNew: '+12 今日新增',
-    color: 'blue',
-  },
-  {
-    title: '订单总数',
-    value: '3,567',
-    icon: 'FileText',
-    todayNew: '+45 今日新增',
-    color: 'green',
-  },
-  {
-    title: '发货单总数',
-    value: '2,891',
-    icon: 'Package',
-    todayNew: '+28 今日新增',
-    color: 'purple',
-  },
-  {
-    title: '发票总数',
-    value: '2,456',
-    icon: 'Receipt',
-    todayNew: '+32 今日新增',
-    color: 'orange',
-  }
-   ]
-}
-    return res(ctx.status(200), ctx.json(data));
+   return res(
+  ctx.status(200),
+  ctx.json({
+    code: 200,
+    message: "success",
+    data: {
+      activities: [
+        {
+          titleAct: "新客户注册",
+          titleSta: "客户总数",
+          value: 5,
+          icon: "Users",
+          todayNew: 0,
+          description: "客户名称：上海 - 20小时前",
+          module: "客户管理",
+          color: "blue"
+        },
+        {
+          titleAct: "新订单创建",
+          titleSta: "订单总数",
+          value: 9,
+          icon: "FileText",
+          todayNew: 0,
+          description: "订单号：SO202500009 - 20小时前",
+          module: "订单管理",
+          color: "green"
+        },
+        {
+          titleAct: "新发货单创建",
+          titleSta: "发货单总数",
+          value: 1,
+          icon: "Package",
+          todayNew: 0,
+          description: "发货单号：DEL20250730-001 - 20小时前",
+          module: "发货管理",
+          color: "purple"
+        },
+        {
+          titleAct: "新发票开具",
+          titleSta: "发票总数",
+          value: 5,
+          icon: "Receipt",
+          todayNew: 5,
+          description: "发票号：INV20250731-005 - 刚刚",
+          module: "财务管理",
+          color: "red"
+        }
+      ]
+    }
   })
+);
+  }),
 ];
 

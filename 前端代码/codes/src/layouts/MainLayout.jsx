@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from '@/components/Sidebar';
 import { TopBar } from '@/components/TopBar';
 import { ProgressBar } from '@/components/ProgressBar';
+import { useTheme } from '@/components/ThemeProvider';
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -10,6 +11,7 @@ const MainLayout = () => {
   const [user, setUser] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   // 获取用户信息
   useEffect(() => {
@@ -39,24 +41,30 @@ const MainLayout = () => {
     // 清除本地存储
     localStorage.removeItem('user');
     localStorage.removeItem('rememberedUsername');
+    localStorage.removeItem('currentRole');
     
     // 跳转到登录页
     navigate('/login');
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+    <div className={`flex h-screen ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        toggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
+        theme={theme}
+      />
       
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopBar 
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
           user={user}
           onLogout={handleLogout}
+          theme={theme}
         />
         {loading && <ProgressBar />}
         
-        <main className="flex-1 overflow-y-auto p-6 bg-blue-50">
+        <main className={`flex-1 overflow-y-auto p-6 ${theme === 'dark' ? 'bg-gray-800' : 'bg-blue-50'}`}>
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>

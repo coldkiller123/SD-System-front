@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -278,8 +278,11 @@ import { getInprocessOrders, updateOrderStatusToCompleted } from '@/apis/main';
 
 const DeliveryOrderList = () => {
   // 搜索关键字
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  // 当前页码（前端从1开始）
+  const searchInputRef = useRef(null);
+
+  // 当前页码
   const [page, setPage] = useState(1);
   // 每页显示条数
   const pageSize = 10;
@@ -328,6 +331,14 @@ const DeliveryOrderList = () => {
   useEffect(() => {
     setPage(1);
   }, [searchTerm]);
+
+  // 输入框内容为空时自动刷新
+  useEffect(() => {
+    if (searchInput === '' && searchTerm !== '') {
+      setSearchTerm('');
+    }
+    // eslint-disable-next-line
+  }, [searchInput]);
 
   // 当前页订单数据
   const orders = data?.orders || [];
@@ -462,6 +473,32 @@ const DeliveryOrderList = () => {
       ? selectedDeliveryOrder.orders.filter(order => order.status === '已发货').length
       : 0;
 
+  // 搜索框相关逻辑
+  const handleSearchInputChange = (e) => {
+    setSearchInput(e.target.value);
+  };
+
+  const handleSearch = () => {
+    // 只有内容变化时才触发
+    if (searchInput.trim() !== searchTerm) {
+      setSearchTerm(searchInput.trim());
+    }
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    // 自动聚焦
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -494,16 +531,45 @@ const DeliveryOrderList = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 pb-4">
-          <div className="flex items-center mb-4">
-            <span className="mr-2">
-              <Search className="h-4 w-4 text-gray-400" />
-            </span>
-            <Input
-              placeholder="搜索订单号、发货单号或客户名称..."
-              className="h-10 w-96"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
+          <div className="mb-6">
+            <div className="relative flex items-center space-x-2 w-full">
+              {/* 搜索按钮图标，放在搜索框左边外面 */}
+              <button
+                type="button"
+                aria-label="搜索"
+                className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+                style={{ minWidth: 40, minHeight: 40 }}
+                onClick={handleSearch}
+              >
+                <Search className="h-5 w-5" />
+              </button>
+              <div className="relative flex-1">
+                {/* 删除搜索框内的灰色搜索图标 */}
+                <Input 
+                  ref={searchInputRef}
+                  placeholder="搜索订单号、发货单号或客户名称..." 
+                  className="h-12 w-full"
+                  value={searchInput}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleSearchKeyDown}
+                  autoComplete="off"
+                  style={{ minWidth: 0 }}
+                />
+                {/* 清除按钮 */}
+                {searchInput && (
+                  <button
+                    type="button"
+                    aria-label="清除"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                    style={{ padding: 0, background: 'none', border: 'none', lineHeight: 0 }}
+                    onClick={handleClearSearch}
+                    tabIndex={-1}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="border border-blue-100 rounded-lg overflow-hidden">
             <Table>
@@ -518,12 +584,10 @@ const DeliveryOrderList = () => {
                       disabled={selectableOrderIds.length === 0}
                     />
                   </TableHead>
-                  <TableHead className="text-blue-800">订单编号</TableHead>
                   <TableHead className="text-blue-800">发货单编号</TableHead>
+                  <TableHead className="text-blue-800">订单编号</TableHead>
                   <TableHead className="text-blue-800">客户名称</TableHead>
                   <TableHead className="text-blue-800">商品名称</TableHead>
-                  <TableHead className="text-blue-800">数量</TableHead>
-                  <TableHead className="text-blue-800">订单金额</TableHead>
                   <TableHead className="text-blue-800">下单日期</TableHead>
                   <TableHead className="text-blue-800">状态</TableHead>
                   <TableHead className="text-blue-800 text-right">操作</TableHead>
@@ -532,14 +596,14 @@ const DeliveryOrderList = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={8}>
                       <div className="text-center py-10">加载中...</div>
                     </TableCell>
                   </TableRow>
                 ) : isError ? (
                   // 加载失败
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={8}>
                       <div className="text-center py-10 text-red-500">{error?.message || '加载数据失败'}</div>
                     </TableCell>
                   </TableRow>
@@ -558,12 +622,10 @@ const DeliveryOrderList = () => {
                             onChange={() => toggleOrderSelect(order.id, isCompleted)}
                           />
                         </TableCell>
-                        <TableCell className="font-medium">{order.id}</TableCell>
                         <TableCell>{order.deliveryOrderId || '-'}</TableCell>
+                        <TableCell className="font-medium">{order.id}</TableCell>
                         <TableCell>{order.customerName}</TableCell>
                         <TableCell>{order.productName}</TableCell>
-                        <TableCell>{order.quantity}</TableCell>
-                        <TableCell>¥{order.amount?.toLocaleString?.() ?? order.amount}</TableCell>
                         <TableCell>{formatDate(order.orderDate)}</TableCell>
                         <TableCell>
                           <span
@@ -615,7 +677,7 @@ const DeliveryOrderList = () => {
                 ) : (
                   // 无数据时显示空状态
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={8}>
                       <div className="text-center py-10">
                         <Eye className="h-12 w-12 mx-auto text-gray-400" />
                         <h3 className="mt-4 text-lg font-medium">未找到发货订单</h3>

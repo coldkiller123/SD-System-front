@@ -59,7 +59,7 @@ const Index = () => {
       title: '发票管理',
       description: '处理发票开具、收款和财务对账',
       icon: Receipt,
-      color: 'orange',
+      color: 'red',
       path: '/finance/invoice-management'
     }
   ];
@@ -124,12 +124,12 @@ const { data, isLoading } = useQuery({
       </div>
       
      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-  {data?.stats?.map((stat, index) => {
+  {data?.data?.activities?.map((stat, index) => {
     const Icon = iconMap[stat.icon]; // 动态拿到对应图标组件
     return (
       <Card key={index} className="border border-gray-200 hover:shadow-lg transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-sm font-medium text-gray-600">{stat.title}</CardTitle>
+          <CardTitle className="text-sm font-medium text-gray-600">{stat.titleSta}</CardTitle>
           <div className={`p-2 rounded-lg bg-${stat.color}-100 text-${stat.color}-600`}>
             {Icon && <Icon className="h-6 w-6" />} {/* 渲染图标组件 */}
           </div>
@@ -170,12 +170,12 @@ const { data, isLoading } = useQuery({
       {isLoading ? (
         <p className="text-gray-400 text-sm">加载中...</p>
       ) : (
-        data?.activities?.map((item, index) => (
+        data?.data?.activities?.map((item, index) => (
           <div key={index} className={`flex items-center justify-between p-4 rounded-lg bg-${item.color}-50`}>
             <div className="flex items-center space-x-3">
               <div className={`w-2 h-2 rounded-full bg-${item.color}-500`}></div>
               <div>
-                <p className="text-sm font-medium text-gray-800">{item.title}</p>
+                <p className="text-sm font-medium text-gray-800">{item.titleAct}</p>
                 <p className="text-xs text-gray-500">{item.description}</p>
               </div>
             </div>

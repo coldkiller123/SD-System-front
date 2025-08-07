@@ -1,14 +1,21 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, RefreshCw, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, Mail, Lock, User, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+// 引入邮件相关接口
+import { sendEmailCode, verifyEmailCode, resetPassword } from '@/apis/email';
 
 const Login = () => {
+  // 登录相关状态
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [captcha, setCaptcha] = useState('');
@@ -18,21 +25,40 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  
+  // 忘记密码相关状态
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1); // 1: 输入用户名, 2: 验证方式, 3: 密保验证, 4: 邮箱验证, 5: 重置密码
+  const [forgotUsername, setForgotUsername] = useState('');
+  const [verificationMethod, setVerificationMethod] = useState('');
+  const [securityQuestion, setSecurityQuestion] = useState('');
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [emailCountdown, setEmailCountdown] = useState(0);
+  const [requestId, setRequestId] = useState(''); // 邮件验证码相关新增状态
+  const [verifyToken, setVerifyToken] = useState(''); // 邮件验证码相关新增状态
+  
   const navigate = useNavigate();
 
-  // 生成4位数字验证码
+  // 生成4位数字验证码（保持不变）
   const generateCaptcha = () => {
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     setCaptchaCode(code);
     setCountdown(60);
   };
 
-  // 初始化验证码
+  // 初始化验证码（保持不变）
   useEffect(() => {
     generateCaptcha();
   }, []);
 
-  // 倒计时
+  // 验证码倒计时（保持不变）
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -43,7 +69,16 @@ const Login = () => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // 模拟用户角色数据
+  // 邮箱验证码倒计时（新增）
+  useEffect(() => {
+    let timer;
+    if (emailCountdown > 0) {
+      timer = setTimeout(() => setEmailCountdown(emailCountdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [emailCountdown]);
+
+  // 模拟用户角色数据（保持不变）
   const mockUsers = {
     'sales': { password: 'sales123', role: '销售代表', name: '销售小孙' },
     'manager': { password: 'manager123', role: '销售经理', name: '销售组长凝凝子' },
@@ -52,6 +87,7 @@ const Login = () => {
     'admin': { password: 'admin123', role: '系统管理员', name: 'codekiller神' }
   };
 
+  // 登录逻辑（完全保持不变）
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -65,8 +101,47 @@ const Login = () => {
       return;
     }
 
+    // 检查是否是注册用户
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+    const isRegisteredUser = registeredUsers[username];
+
     // 模拟登录验证
     setTimeout(() => {
+      // 先检查是否为注册用户
+      if (isRegisteredUser) {
+        // 验证密码
+        if (isRegisteredUser.password !== password) {
+          setError('用户名或密码错误');
+          generateCaptcha();
+          setLoading(false);
+          return;
+        }
+
+        // 登录成功
+        const loginData = {
+          username,
+          name: isRegisteredUser.name,
+          role: isRegisteredUser.role,
+          loginTime: new Date().toISOString(),
+          ip: '192.168.1.100' // 模拟IP
+        };
+
+        // 存储登录信息
+        localStorage.setItem('user', JSON.stringify(loginData));
+        if (rememberMe) {
+          localStorage.setItem('rememberedUsername', username);
+        }
+
+        // 记录登录日志
+        console.log('登录日志:', loginData);
+
+        // 根据角色跳转
+        navigate('/');
+        setLoading(false);
+        return;
+      }
+
+      // 检查是否为默认用户
       const user = mockUsers[username];
       if (!user || user.password !== password) {
         setError('用户名或密码错误');
@@ -95,10 +170,199 @@ const Login = () => {
 
       // 根据角色跳转
       navigate('/');
+      setLoading(false);
     }, 1000);
   };
 
-  // 粒子背景组件
+  // 忘记密码 - 下一步（仅修改邮件相关逻辑）
+  const handleForgotNext = async () => {
+    if (forgotStep === 1) {
+      // 验证用户名是否存在（保持原有逻辑，不修改）
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+      const isRegisteredUser = registeredUsers[forgotUsername];
+      
+      if (!isRegisteredUser) {
+        toast.error('用户不存在');
+        return;
+      }
+      
+      // 保存用户邮箱用于后续显示
+      setUserEmail(isRegisteredUser.email || `${forgotUsername}@example.com`);
+      setForgotStep(2);
+      return;
+    }
+    
+    if (forgotStep === 2) {
+      if (!verificationMethod) {
+        toast.error('请选择验证方式');
+        return;
+      }
+      
+      // 密保问题验证（保持原有逻辑）
+      if (verificationMethod === 'security') {
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+        const user = registeredUsers[forgotUsername];
+        
+        if (user && user.securityQuestion) {
+          setSecurityQuestion(user.securityQuestion);
+          setForgotStep(3);
+        } else {
+          toast.error('该用户未设置密保问题，请选择其他验证方式');
+        }
+        return;
+      }
+      
+      // 邮箱验证（修改部分：调用邮件接口）
+      if (verificationMethod === 'email') {
+        setForgotStep(4);
+        await sendEmailVerification();
+        return;
+      }
+    }
+    
+    if (forgotStep === 3) {
+      // 验证密保答案（保持原有逻辑）
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+      const user = registeredUsers[forgotUsername];
+      
+      if (user && user.securityAnswer === securityAnswer) {
+        setForgotStep(5);
+      } else {
+        toast.error('密保答案错误');
+      }
+      return;
+    }
+    
+    if (forgotStep === 4) {
+      // 验证邮箱验证码（修改部分：调用邮件接口）
+      try {
+        const result = await verifyEmailCode({
+          email: userEmail,
+          username: forgotUsername,
+          code: emailCode,
+          requestId: requestId
+        });
+        
+        if (result.success) {
+          setVerifyToken(result.data.token);
+          setForgotStep(5);
+          toast.success('邮箱验证成功');
+        } else {
+          toast.error(result.message || '验证码错误');
+        }
+      } catch (error) {
+        toast.error(error.message || '验证失败');
+      }
+      return;
+    }
+    
+    if (forgotStep === 5) {
+      // 重置密码（保持原有逻辑，仅在邮箱验证时调用接口）
+      if (!newPassword || !confirmNewPassword) {
+        toast.error('请输入新密码');
+        return;
+      }
+      
+      if (newPassword !== confirmNewPassword) {
+        toast.error('两次输入的密码不一致');
+        return;
+      }
+      
+      if (newPassword.length < 6) {
+        toast.error('密码长度至少为6位');
+        return;
+      }
+      
+      // 区分验证方式处理（新增邮件验证后的密码重置）
+      if (verificationMethod === 'email' && verifyToken) {
+        try {
+          const result = await resetPassword({
+            token: verifyToken,
+            newPassword: newPassword,
+            confirmPassword: confirmNewPassword
+          });
+          
+          if (result.success) {
+            toast.success('密码重置成功');
+            // 更新本地存储的密码（保持与本地数据同步）
+            const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+            if (registeredUsers[forgotUsername]) {
+              registeredUsers[forgotUsername].password = newPassword;
+              localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+            }
+            setForgotPasswordOpen(false);
+            resetForgotForm();
+          } else {
+            toast.error(result.message || '密码重置失败');
+          }
+        } catch (error) {
+          toast.error(error.message || '密码重置失败');
+        }
+      } else {
+        // 密保问题验证后的密码重置（保持原有逻辑）
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+        if (registeredUsers[forgotUsername]) {
+          registeredUsers[forgotUsername].password = newPassword;
+          localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+          toast.success('密码重置成功');
+          setForgotPasswordOpen(false);
+          resetForgotForm();
+        }
+      }
+      return;
+    }
+  };
+
+  // 发送邮箱验证码（新增邮件相关函数）
+  const sendEmailVerification = async () => {
+    try {
+      const result = await sendEmailCode({
+        email: userEmail,
+        username: forgotUsername,
+        type: 'forgot_password'
+      });
+      
+      if (result.success) {
+        setRequestId(result.data.requestId);
+        setEmailSent(true);
+        setEmailCountdown(60);
+        toast.success(result.message || '验证码已发送至您的邮箱');
+      } else {
+        toast.error(result.message || '发送验证码失败');
+      }
+    } catch (error) {
+      toast.error(error.message || '发送验证码失败');
+    }
+  };
+
+  // 忘记密码 - 上一步（保持不变）
+  const handleForgotBack = () => {
+    if (forgotStep > 1) {
+      setForgotStep(forgotStep - 1);
+    } else {
+      setForgotPasswordOpen(false);
+      resetForgotForm();
+    }
+  };
+
+  // 重置忘记密码表单（保持不变，仅新增邮件相关状态重置）
+  const resetForgotForm = () => {
+    setForgotStep(1);
+    setForgotUsername('');
+    setVerificationMethod('');
+    setSecurityQuestion('');
+    setSecurityAnswer('');
+    setEmailCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setEmailSent(false);
+    setUserEmail('');
+    setEmailCountdown(0);
+    setRequestId('');
+    setVerifyToken('');
+  };
+
+  // 粒子背景组件（保持不变）
   const ParticleBackground = () => (
     <div className="absolute inset-0 overflow-hidden">
       {[...Array(20)].map((_, i) => (
@@ -123,6 +387,7 @@ const Login = () => {
     </div>
   );
 
+  // 渲染部分（保持不变，仅邮箱验证步骤UI适配）
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center p-4 relative">
       <ParticleBackground />
@@ -238,9 +503,13 @@ const Login = () => {
                     记住账号
                   </label>
                 </div>
-                <a href="#" className="text-sm text-blue-600 hover:text-blue-800">
+                <button
+                  type="button"
+                  onClick={() => setForgotPasswordOpen(true)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
                   忘记密码？
-                </a>
+                </button>
               </div>
 
               <Button
@@ -259,16 +528,232 @@ const Login = () => {
               </Button>
             </form>
 
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                还没有账户？{' '}
+                <button
+                  onClick={() => navigate('/register')}
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  立即注册
+                </button>
+              </p>
+            </div>
+
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
-                © 2025 SD销售分发系统. 保留所有权利. Produced by Group2
+                © 2024 SD销售分发系统. 保留所有权利.
               </p>
             </div>
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* 忘记密码对话框 */}
+      <Dialog open={forgotPasswordOpen} onOpenChange={(open) => {
+        if (!open) {
+          resetForgotForm();
+        }
+        setForgotPasswordOpen(open);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {forgotStep === 1 && '忘记密码'}
+              {forgotStep === 2 && '选择验证方式'}
+              {forgotStep === 3 && '密保验证'}
+              {forgotStep === 4 && '邮箱验证'}
+              {forgotStep === 5 && '重置密码'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {forgotStep === 1 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">用户名</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="请输入用户名"
+                      value={forgotUsername}
+                      onChange={(e) => setForgotUsername(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={() => setForgotPasswordOpen(false)}>
+                    取消
+                  </Button>
+                  <Button onClick={handleForgotNext} className="bg-blue-600 hover:bg-blue-700">
+                    下一步
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {forgotStep === 2 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">验证方式</Label>
+                  <Select value={verificationMethod} onValueChange={setVerificationMethod}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="请选择验证方式" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="security">密保问题</SelectItem>
+                      <SelectItem value="email">邮箱验证码</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={handleForgotBack}>
+                    上一步
+                  </Button>
+                  <Button onClick={handleForgotNext} className="bg-blue-600 hover:bg-blue-700">
+                    下一步
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {forgotStep === 3 && (
+              <div className="space-y-4">
+                <div className="p-3 bg-blue-50 rounded-md">
+                  <p className="text-sm font-medium text-gray-700">问题: {securityQuestion}</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">答案</Label>
+                  <Input
+                    type="text"
+                    placeholder="请输入密保答案"
+                    value={securityAnswer}
+                    onChange={(e) => setSecurityAnswer(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={handleForgotBack}>
+                    上一步
+                  </Button>
+                  <Button onClick={handleForgotNext} className="bg-blue-600 hover:bg-blue-700">
+                    验证
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {forgotStep === 4 && (
+              <div className="space-y-4">
+                <div className="p-3 bg-blue-50 rounded-md">
+                  <p className="text-sm text-gray-700">
+                    验证码已发送至您的邮箱: 
+                    <span className="font-medium"> {userEmail}</span>
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">验证码</Label>
+                  <Input
+                    type="text"
+                    placeholder="请输入6位验证码"
+                    value={emailCode}
+                    onChange={(e) => setEmailCode(e.target.value)}
+                    maxLength={6}
+                    required
+                  />
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={sendEmailVerification}
+                  disabled={emailCountdown > 0}
+                  className="w-full"
+                >
+                  {emailCountdown > 0 ? `再次发送 (${emailCountdown}s)` : '再次发送验证码'}
+                </Button>
+                
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={handleForgotBack}>
+                    上一步
+                  </Button>
+                  <Button onClick={handleForgotNext} className="bg-blue-600 hover:bg-blue-700">
+                    验证
+                  </Button>
+                </div>
+              </div>
+            )}
+            
+            {forgotStep === 5 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">新密码</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="请输入新密码"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500">密码长度至少6位</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">确认新密码</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type={showConfirmNewPassword ? "text" : "password"}
+                      placeholder="请再次输入新密码"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={handleForgotBack}>
+                    上一步
+                  </Button>
+                  <Button onClick={handleForgotNext} className="bg-blue-600 hover:bg-blue-700">
+                    重置密码
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default Login;
+    

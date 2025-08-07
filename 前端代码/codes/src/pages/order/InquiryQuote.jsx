@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Search, Plus, Filter, Download, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Plus, Filter, Download, Eye, CheckCircle, XCircle, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import CreateInquiry from './CreateInquiry.jsx';
 
@@ -15,8 +15,8 @@ const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
   const params = new URLSearchParams();
   if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
   if (pageSize !== undefined) params.append('pageSize', pageSize);
-  if (filters.inquiryId) params.append('inquiryId', filters.inquiryId);
-  if (filters.customerName) params.append('customerName', filters.customerName);
+  // 合并后的搜索参数
+  if (filters.search) params.append('search', filters.search);
   if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
   const res = await fetch(`/api/inquiries?${params.toString()}`);
@@ -26,23 +26,60 @@ const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
 
 const InquiryQuote = () => {
   const [pageIndex, setPageIndex] = useState(0);
+  // 合并后的搜索参数
   const [filters, setFilters] = useState({
-    inquiryId: '',
-    customerName: '',
+    search: '',
     status: ''
   });
+  // 搜索输入框内容
+  const [searchInput, setSearchInput] = useState('');
+  const inputRef = useRef(null);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const pageSize = 10;
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['inquiries', pageIndex, filters],
+    queryKey: ['inquiries', pageIndex, pageSize, filters],
     queryFn: () => fetchInquiries({ pageIndex, pageSize, filters })
   });
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPageIndex(0);
+  };
+
+  // 搜索按钮点击或回车时触发搜索
+  const handleSearch = () => {
+    if (filters.search !== searchInput) {
+      setFilters(prev => ({ ...prev, search: searchInput }));
+      setPageIndex(1);
+    }
+  };
+
+  // 清空搜索
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setFilters(prev => ({ ...prev, search: '' }));
+    setPageIndex(1);
+    inputRef.current && inputRef.current.focus();
+  };
+
+  // 输入框回车事件
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // 输入框内容变化
+  const handleInputChange = (e) => {
+    setSearchInput(e.target.value);
+    // 如果清空内容，自动刷新为全部
+    if (e.target.value === '') {
+      setFilters(prev => ({ ...prev, search: '' }));
+      setPageIndex(1);
+    }
   };
 
   const handleUpdateStatus = (inquiryId, newStatus) => {
@@ -58,6 +95,10 @@ const InquiryQuote = () => {
 
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+  // 计算显示范围
+  const startItem = (pageIndex - 1) * pageSize + 1;
+  const endItem = Math.min(pageIndex * pageSize, data?.total || 0);
 
   return (
     <div className="space-y-6">
@@ -76,24 +117,40 @@ const InquiryQuote = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                placeholder="搜索询价单号" 
-                className="pl-10"
-                value={filters.inquiryId}
-                onChange={(e) => handleFilterChange('inquiryId', e.target.value)}
-              />
-            </div>
-            
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input 
-                placeholder="搜索客户名称" 
-                className="pl-10"
-                value={filters.customerName}
-                onChange={(e) => handleFilterChange('customerName', e.target.value)}
-              />
+             {/* 搜索按钮移到搜索框左侧（外面），和订单列表一致 */}
+            <div className="flex items-center md:col-span-2">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="mr-2 text-blue-600 hover:bg-blue-100"
+                onClick={handleSearch}
+                tabIndex={0}
+                aria-label="搜索"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              <div className="relative flex-1">
+                <Input
+                  ref={inputRef}
+                  placeholder="搜索询价单号或客户名称"
+                  className="pr-8"
+                  value={searchInput}
+                  onChange={handleInputChange}
+                  onKeyDown={handleInputKeyDown}
+                  autoComplete="off"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={handleClearSearch}
+                    tabIndex={-1}
+                    aria-label="清空"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             
             <Select 
