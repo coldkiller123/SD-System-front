@@ -7,78 +7,274 @@ import { Input } from '@/components/ui/input';
 import { Eye, Search, Package, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
-/**
- * 获取已发货和已完成订单的API请求
- * @param {Object} param0 - 参数对象
- * @param {number} param0.page - 当前页码
- * @param {number} param0.pageSize - 每页条数
- * @param {string} param0.search - 搜索关键字
- * @returns {Promise<Object>} - 返回订单分页数据
- */
-const fetchInprocessOrders = async ({ page, pageSize, search }) => {
-  const params = new URLSearchParams();
-  // 只查询“已发货”和“已完成”状态的订单
-  params.append('status', '已发货,已完成');
-  if (page !== undefined) params.append('page', page - 1); // API页码从0开始
-  if (pageSize !== undefined) params.append('page_size', pageSize);
-  if (search) params.append('search', search);
+// /**
+//  * 获取已发货和已完成订单的API请求
+//  * @param {Object} param0 - 参数对象
+//  * @param {number} param0.page - 当前页码
+//  * @param {number} param0.pageSize - 每页条数
+//  * @param {string} param0.search - 搜索关键字
+//  * @returns {Promise<Object>} - 返回订单分页数据
+//  */
+// const fetchInprocessOrders = async ({ page, pageSize, search }) => {
+//   const params = new URLSearchParams();
+//   // 只查询“已发货”和“已完成”状态的订单
+//   params.append('status', '已发货,已完成');
+//   if (page !== undefined) params.append('page', page - 1); // API页码从0开始
+//   if (pageSize !== undefined) params.append('page_size', pageSize);
+//   if (search) params.append('search', search);
 
-  // 注意：接口路径已由 /api/orders/delivered 改为 /api/orders/inprocess
-  const res = await fetch(`/api/orders/inprocess?${params.toString()}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    throw new Error('获取发货订单失败');
-  }
-  const data = await res.json();
-  if (data.code !== 200) {
-    throw new Error(data.message || '获取发货订单失败');
-  }
-  // 适配后端返回字段
-  return {
-    total: data.data.total,
-    page: data.data.page,
-    pageSize: data.data.page_size,
-    orders: data.data.orders.map(order => ({
-      id: order.id,
-      deliveryOrderId: order.deliveryOrderId,
-      customerName: order.customerName,
-      productName: order.productName,
-      quantity: order.quantity,
-      amount: order.totalAmount,
-      orderDate: order.createdAt,
-      status: order.status,
-    })),
-  };
-};
+//   // 注意：接口路径已由 /api/orders/delivered 改为 /api/orders/inprocess
+//   const res = await fetch(`/api/orders/inprocess?${params.toString()}`, {
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     credentials: 'include',
+//   });
+//   if (!res.ok) {
+//     throw new Error('获取发货订单失败');
+//   }
+//   const data = await res.json();
+//   if (data.code !== 200) {
+//     throw new Error(data.message || '获取发货订单失败');
+//   }
+//   // 适配后端返回字段
+//   return {
+//     total: data.data.total,
+//     page: data.data.page,
+//     pageSize: data.data.page_size,
+//     orders: data.data.orders.map(order => ({
+//       id: order.id,
+//       deliveryOrderId: order.deliveryOrderId,
+//       customerName: order.customerName,
+//       productName: order.productName,
+//       quantity: order.quantity,
+//       amount: order.totalAmount,
+//       orderDate: order.createdAt,
+//       status: order.status,
+//     })),
+//   };
+// };
 
-/**
- * 修改订单状态API
- * @param {Object} param0 - 参数对象
- * @param {string|number} param0.orderId - 订单ID
- * @param {string} param0.status - 新的订单状态
- * @returns {Promise<Object>} - 返回修改结果
- */
-const updateOrderStatus = async ({ orderId, status }) => {
-  const res = await fetch(`/api/orders/${orderId}/status`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({ status }),
-  });
-  const data = await res.json();
-  if (res.ok && data.code === 200) {
-    return data;
-  } else {
-    throw new Error(data.message || '修改订单状态失败');
-  }
-};
+// /**
+//  * 修改订单状态API
+//  * @param {Object} param0 - 参数对象
+//  * @param {string|number} param0.orderId - 订单ID
+//  * @param {string} param0.status - 新的订单状态
+//  * @returns {Promise<Object>} - 返回修改结果
+//  */
+// const updateOrderStatus = async ({ orderId, status }) => {
+//   const res = await fetch(`/api/orders/${orderId}/status`, {
+//     method: 'PUT',
+//     headers: {
+//       'Content-Type': 'application/json',
+//     },
+//     credentials: 'include',
+//     body: JSON.stringify({ status }),
+//   });
+//   const data = await res.json();
+//   if (res.ok && data.code === 200) {
+//     return data;
+//   } else {
+//     throw new Error(data.message || '修改订单状态失败');
+//   }
+// };
+
+// const DeliveryOrderList = () => {
+//   // 搜索关键字
+//   const [searchTerm, setSearchTerm] = useState('');
+//   // 当前页码
+//   const [page, setPage] = useState(1);
+//   // 每页显示条数
+//   const pageSize = 10;
+//   // 详情卡片相关
+//   const [selectedDeliveryOrder, setSelectedDeliveryOrder] = useState(null);
+
+//   // 批量选择相关
+//   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+
+//   const {
+//     data,
+//     isLoading,
+//     isError,
+//     refetch,
+//     error,
+//   } = useQuery({
+//     queryKey: ['inprocessOrders', page, pageSize, searchTerm], // 缓存key
+//     queryFn: () => fetchInprocessOrders({ page, pageSize, search: searchTerm }),
+//     keepPreviousData: true, // 翻页时保留上一次数据
+//   });
+
+//   /**
+//    * 修改订单状态的mutation
+//    * 成功后自动刷新订单列表
+//    * 
+//    * 下面的 onSuccess 触发 refetch()，会重新获取订单数据，
+//    * 这样页面上按钮的状态（比如“设为已完成”变成“已完成”）会自动切换。
+//    * 这就是“点击确认将订单状态修改之后按钮随之切换”的核心逻辑。
+//    */
+//   const mutation = useMutation({
+//     mutationFn: updateOrderStatus,
+//     onSuccess: () => {
+//       refetch(); // 订单状态修改成功后，刷新订单列表，按钮状态随之切换
+//       setSelectedOrderIds([]);
+//     },
+//   });
+
+//   // 批量操作loading
+//   const [batchLoading, setBatchLoading] = useState(false);
+
+//   // 发货单详情卡片的批量设为已完成loading
+//   const [detailBatchLoading, setDetailBatchLoading] = useState(false);
+
+//   // 搜索时重置到第一页
+//   useEffect(() => {
+//     setPage(1);
+//   }, [searchTerm]);
+
+//   // 当前页订单数据
+//   const orders = data?.orders || [];
+//   const totalRecords = data?.total || 0;
+//   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+
+//   // 仅可选“已发货”订单
+//   const selectableOrderIds = useMemo(
+//     () => orders.filter(o => o.status === '已发货').map(o => o.id),
+//     [orders]
+//   );
+
+//   // 当前页全选
+//   const isAllSelected = useMemo(() => {
+//     if (selectableOrderIds.length === 0) return false;
+//     return selectableOrderIds.every(id => selectedOrderIds.includes(id));
+//   }, [selectableOrderIds, selectedOrderIds]);
+
+//   // 选中数量
+//   const selectedCount = selectedOrderIds.length;
+
+//   // 切换单个订单选择
+//   const toggleOrderSelect = (orderId, disabled) => {
+//     if (disabled) return;
+//     setSelectedOrderIds(prev => {
+//       if (prev.includes(orderId)) {
+//         return prev.filter(id => id !== orderId);
+//       } else {
+//         return [...prev, orderId];
+//       }
+//     });
+//   };
+
+//   // 切换全选
+//   const toggleSelectAll = () => {
+//     if (isAllSelected) {
+//       setSelectedOrderIds(prev => prev.filter(id => !selectableOrderIds.includes(id)));
+//     } else {
+//       setSelectedOrderIds(prev => Array.from(new Set([...prev, ...selectableOrderIds])));
+//     }
+//   };
+
+//   // 取消选择
+//   const handleCancelSelect = () => {
+//     setSelectedOrderIds([]);
+//   };
+
+//   // 批量设为已完成
+//   const handleBatchSetCompleted = async () => {
+//     if (selectedOrderIds.length === 0) return;
+//     if (!window.confirm('确定要将选中的订单状态批量修改为“已完成”吗？')) return;
+//     setBatchLoading(true);
+//     try {
+//       // 并发批量调用
+//       await Promise.all(
+//         selectedOrderIds.map(orderId =>
+//           updateOrderStatus({ orderId, status: '已完成' })
+//         )
+//       );
+//       setSelectedOrderIds([]);
+//       refetch();
+//       window.alert('批量操作成功！');
+//     } catch (e) {
+//       window.alert(e.message || '批量操作失败');
+//     } finally {
+//       setBatchLoading(false);
+//     }
+//   };
+
+//   // 查看发货单详情
+//   const handleViewDetail = (deliveryOrderId) => {
+//     const ordersList = (data?.orders || []).filter(order => order.deliveryOrderId === deliveryOrderId);
+//     if (ordersList.length > 0) {
+//       setSelectedDeliveryOrder({
+//         deliveryOrderId,
+//         orders: ordersList,
+//         finishTime: new Date().toLocaleString('zh-CN'),
+//       });
+//     } else {
+//       // 没有找到则清空
+//       setSelectedDeliveryOrder(null);
+//     }
+//   };
+
+//   /**
+//    * 将订单状态设为“已完成”
+//    * @param {string|number} orderId - 订单ID
+//    * 
+//    * 这里点击确认后会调用 mutation.mutate，触发上面 mutation 的 onSuccess，
+//    * 从而刷新数据，按钮状态切换。
+//    */
+//   const handleChangeStatus = (orderId) => {
+//     // 获取当前订单对象
+//     const currentOrder = (data?.orders || []).find(order => order.id === orderId);
+//     const orderNo = currentOrder ? currentOrder.id : orderId;
+//     if (window.confirm(`确定要将订单号为「${orderNo}」的订单状态修改为“已完成”吗？`)) {
+//       mutation.mutate({ orderId, status: '已完成' }); // 触发状态变更和按钮切换
+//     }
+//   };
+
+//   // 发货单详情卡片的“全部设为已完成”按钮处理
+//   const handleDetailBatchSetCompleted = async () => {
+//     if (
+//       !selectedDeliveryOrder ||
+//       !selectedDeliveryOrder.orders ||
+//       selectedDeliveryOrder.orders.length === 0
+//     ) {
+//       return;
+//     }
+//     // 找出该发货单下所有“已发货”状态的订单
+//     const toCompleteOrders = selectedDeliveryOrder.orders.filter(
+//       order => order.status === '已发货'
+//     );
+//     if (toCompleteOrders.length === 0) return;
+//     if (
+//       !window.confirm(
+//         `确定要将该发货单下所有“已发货”状态的订单批量设为“已完成”吗？`
+//       )
+//     )
+//       return;
+//     setDetailBatchLoading(true);
+//     try {
+//       await Promise.all(
+//         toCompleteOrders.map(order =>
+//           updateOrderStatus({ orderId: order.id, status: '已完成' })
+//         )
+//       );
+//       refetch();
+//       window.alert('批量操作成功！');
+//     } catch (e) {
+//       window.alert(e.message || '批量操作失败');
+//     } finally {
+//       setDetailBatchLoading(false);
+//     }
+//   };
+
+//   // 计算发货单详情卡片中“已发货”状态的订单数量
+//   const detailSelectableCount =
+//     selectedDeliveryOrder && selectedDeliveryOrder.orders
+//       ? selectedDeliveryOrder.orders.filter(order => order.status === '已发货').length
+//       : 0;
+
+// 导入封装的接口（替换本地 fetch 实现）
+import { getInprocessOrders, updateOrderStatusToCompleted } from '@/apis/main';
 
 const DeliveryOrderList = () => {
   // 搜索关键字
@@ -96,6 +292,7 @@ const DeliveryOrderList = () => {
   // 批量选择相关
   const [selectedOrderIds, setSelectedOrderIds] = useState([]);
 
+  // 查询已发货和已完成订单（使用封装的接口）
   const {
     data,
     isLoading,
@@ -104,22 +301,22 @@ const DeliveryOrderList = () => {
     error,
   } = useQuery({
     queryKey: ['inprocessOrders', page, pageSize, searchTerm], // 缓存key
-    queryFn: () => fetchInprocessOrders({ page, pageSize, search: searchTerm }),
+    queryFn: () => getInprocessOrders({ 
+      page, // 传递前端页码（1开始），接口内部会转换为后端需要的格式
+      pageSize, 
+      search: searchTerm 
+    }),
     keepPreviousData: true, // 翻页时保留上一次数据
   });
 
   /**
-   * 修改订单状态的mutation
+   * 修改订单状态的mutation（使用封装的接口）
    * 成功后自动刷新订单列表
-   * 
-   * 下面的 onSuccess 触发 refetch()，会重新获取订单数据，
-   * 这样页面上按钮的状态（比如“设为已完成”变成“已完成”）会自动切换。
-   * 这就是“点击确认将订单状态修改之后按钮随之切换”的核心逻辑。
    */
   const mutation = useMutation({
-    mutationFn: updateOrderStatus,
+    mutationFn: updateOrderStatusToCompleted, // 直接使用封装的接口
     onSuccess: () => {
-      refetch(); // 订单状态修改成功后，刷新订单列表，按钮状态随之切换
+      refetch(); // 刷新订单列表，更新按钮状态
       setSelectedOrderIds([]);
     },
   });
@@ -154,7 +351,7 @@ const DeliveryOrderList = () => {
     [orders]
   );
 
-  // 当前页全选
+  // 当前页全选状态
   const isAllSelected = useMemo(() => {
     if (selectableOrderIds.length === 0) return false;
     return selectableOrderIds.every(id => selectedOrderIds.includes(id));
@@ -195,11 +392,9 @@ const DeliveryOrderList = () => {
     if (!window.confirm('确定要将选中的订单状态批量修改为“已完成”吗？')) return;
     setBatchLoading(true);
     try {
-      // 并发批量调用
+      // 并发批量调用状态修改接口
       await Promise.all(
-        selectedOrderIds.map(orderId =>
-          updateOrderStatus({ orderId, status: '已完成' })
-        )
+        selectedOrderIds.map(orderId => updateOrderStatusToCompleted(orderId))
       );
       setSelectedOrderIds([]);
       refetch();
@@ -221,24 +416,20 @@ const DeliveryOrderList = () => {
         finishTime: new Date().toLocaleString('zh-CN'),
       });
     } else {
-      // 没有找到则清空
       setSelectedDeliveryOrder(null);
     }
   };
 
   /**
-   * 将订单状态设为“已完成”
+   * 将单个订单状态设为“已完成”
    * @param {string|number} orderId - 订单ID
-   * 
-   * 这里点击确认后会调用 mutation.mutate，触发上面 mutation 的 onSuccess，
-   * 从而刷新数据，按钮状态切换。
    */
   const handleChangeStatus = (orderId) => {
     // 获取当前订单对象
     const currentOrder = (data?.orders || []).find(order => order.id === orderId);
     const orderNo = currentOrder ? currentOrder.id : orderId;
     if (window.confirm(`确定要将订单号为「${orderNo}」的订单状态修改为“已完成”吗？`)) {
-      mutation.mutate({ orderId, status: '已完成' }); // 触发状态变更和按钮切换
+      mutation.mutate(orderId); // 调用mutation，触发状态更新
     }
   };
 
@@ -265,9 +456,7 @@ const DeliveryOrderList = () => {
     setDetailBatchLoading(true);
     try {
       await Promise.all(
-        toCompleteOrders.map(order =>
-          updateOrderStatus({ orderId: order.id, status: '已完成' })
-        )
+        toCompleteOrders.map(order => updateOrderStatusToCompleted(order.id))
       );
       refetch();
       window.alert('批量操作成功！');

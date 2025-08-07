@@ -288,7 +288,7 @@ export const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, war
 /**
  * 获取状态为已发货&已完成的订单列表
  * @param {Object} params - 请求参数
- * @param {number} [params.page=0] - 页码（从0开始，默认0）
+ * @param {number} [params.page=1] - 页码（从1开始，默认1）
  * @param {number} [params.pageSize=10] - 每页数量（默认10）
  * @param {string} [params.search] - 搜索关键词（订单号/发货单号/客户名称）
  * @returns {Promise} - 包含订单列表和分页信息的响应
@@ -296,7 +296,7 @@ export const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, war
 export const getInprocessOrders = async (params = {}) => {
   // 设置默认参数，合并用户传入的参数
   const {
-    page = 0,
+    page = 1,
     pageSize = 10,
     search
   } = params;
@@ -309,13 +309,16 @@ export const getInprocessOrders = async (params = {}) => {
       search: search || undefined // 无搜索时不传递该参数
     }
   });
+  console.log('后端返回的原始响应：', response);
+  console.log('客户详情数据：', response.info); 
+  console.log('客户详情数据：', response.data); 
 
   // 解析响应数据，转换为前端易用的格式
   return {
-    total: response.data.data.total,
-    page: response.data.data.page,
-    pageSize: response.data.data.page_size,
-    orders: response.data.data.orders.map(order => ({
+    total: response.data.total,
+    page: response.data.page,
+    pageSize: response.data.page_size,
+    orders: response.data.orders.map(order => ({
       id: order.id,
       deliveryOrderId: order.deliveryOrderId,
       customerName: order.customerName,
