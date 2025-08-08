@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -14,189 +13,86 @@ import SearchableSelect from '@/components/SearchableSelect';
 import CustomerForm from './Form.jsx';
 import { CREDIT_RATING_OPTIONS, getCreditRatingLabel } from '@/constants/options';
 
-// 模拟API获取客户数据
-// const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-//   // 模拟API延迟
-//   await new Promise(resolve => setTimeout(resolve, 500));
-  
-//   // 模拟数据
-//   const allCustomers = Array.from({ length: 85 }, (_, i) => ({
-//     id: `C${1000 + i}`,
-//     name: `客户${i + 1}`,
-//     region: ['华东', '华北', '华南', '华中', '西南'][i % 5],
-//     industry: ['制造业', '零售业', '金融业', '互联网', '教育'][i % 5],
-//     contact: `联系人${i + 1}`,
-//     phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
-//     // address: `地址${i + 1}`,
-//     // 新增
-//     company: `公司${i + 1}`,
-//     creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][i % 5],
-//     // createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString()
-//   }));
-
-//   // 应用筛选
-//   let filtered = allCustomers;
-//   if (filters.name) {
-//     filtered = filtered.filter(c => c.name.includes(filters.name));
-//   }
-//   if (filters.region && filters.region !== 'all') {
-//     filtered = filtered.filter(c => c.region === filters.region);
-//   }
-//   if (filters.industry && filters.industry !== 'all') {
-//     filtered = filtered.filter(c => c.industry === filters.industry);
-//   }
-
-//   // 分页
-//   const start = pageIndex * pageSize;
-//   const end = start + pageSize;
-//   const pageCount = Math.ceil(filtered.length / pageSize);
-  
-//   return {
-//     customers: filtered.slice(start, end),
-//     total: filtered.length,
-//     pageCount
-//   };
-// };
 
 // HXY前端模拟数据测试
-const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-  const queryParams = new URLSearchParams({
-    pageIndex: String(pageIndex),
-    pageSize: String(pageSize),
-    name: filters.name || '',
-    region: filters.region || '',
-    industry: filters.industry || '',
-    creditRating: filters.creditRating || ''
-  });
-
-  const res = await fetch(`/api/customer/list?${queryParams}`);
-  const json = await res.json();
-  return json.data;
-};
-// 测试！fetchCustomers只负责请求和获取数据，筛选和分页参数会通过URL传递给后端，由后端返回已经筛选和分页好的数据。
-
-
-const CustomerList = () => {
-  const [pageIndex, setPageIndex] = useState(0);
-  const [filters, setFilters] = useState({
-    name: '',
-    region: '',
-    industry: '',
-    creditRating: ''
-  });
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const pageSize = 10;
-
-  // 搜索框相关逻辑
-  const [searchInput, setSearchInput] = useState('');
-  const inputRef = useRef(null);
-
-  // 搜索按钮点击或回车时触发搜索
-  const handleSearch = () => {
-    if (filters.name !== searchInput) {
-      setFilters(prev => ({ ...prev, name: searchInput }));
-      setPageIndex(0);
-    }
-  };
-
-  // 清空搜索
-  const handleClearSearch = () => {
-    setSearchInput('');
-    if (filters.name !== '') {
-      setFilters(prev => ({ ...prev, name: '' }));
-      setPageIndex(0);
-    }
-    // 自动聚焦
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-  };
-
-  // 输入框变化
-  const handleInputChange = (e) => {
-    setSearchInput(e.target.value);
-    // 如果清空，自动刷新
-    if (e.target.value === '') {
-      if (filters.name !== '') {
-        setFilters(prev => ({ ...prev, name: '' }));
-        setPageIndex(0);
-      }
-    }
-  };
-
-  // 回车搜索
-  const handleInputKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSearch();
-    }
-  };
-
-  // 其他筛选项变化
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPageIndex(0);
-  };
-
-  const handleEdit = (customer) => {
-    setEditingCustomer(customer);
-    setIsFormOpen(true);
-  };
-
-  const handleFormSuccess = () => {
-    setIsFormOpen(false);
-    setEditingCustomer(null);
-    refetch();
-  };
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['customers', pageIndex, filters],
-    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
-  });
-
-  if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
-
-// import { getCustomerList } from '@/apis/main';
-
 // const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
-//   const response = await getCustomerList({
-//     pageIndex: pageIndex + 1,
-//     pageSize,
+//   const queryParams = new URLSearchParams({
+//     pageIndex: String(pageIndex),
+//     pageSize: String(pageSize),
 //     name: filters.name || '',
 //     region: filters.region || '',
-//     industry: filters.industry || ''
+//     industry: filters.industry || '',
+//     creditRating: filters.creditRating || ''
 //   });
 
-//   return response.data;
+//   const res = await fetch(`/api/customer/list?${queryParams}`);
+//   const json = await res.json();
+//   return json.data;
 // };
+// // 测试！fetchCustomers只负责请求和获取数据，筛选和分页参数会通过URL传递给后端，由后端返回已经筛选和分页好的数据。
+
 
 // const CustomerList = () => {
 //   const [pageIndex, setPageIndex] = useState(0);
 //   const [filters, setFilters] = useState({
 //     name: '',
 //     region: '',
-//     industry: ''
+//     industry: '',
+//     creditRating: ''
 //   });
-//   // 新增：用于临时存储输入框内容
-//   const [inputValue, setInputValue] = useState(''); 
-
 //   const [isFormOpen, setIsFormOpen] = useState(false);
 //   const [editingCustomer, setEditingCustomer] = useState(null);
-//   const pageSize = 10; // 每页条数，可根据需求修改
+//   const pageSize = 10;
 
-//   // 使用React Query调用API
-//   const { data, isLoading, isError, refetch } = useQuery({
-//     //  queryKey包含所有影响数据的参数，确保参数变化时重新请求
-//     queryKey: ['customers', pageIndex, pageSize, filters],
-//     queryFn: () => fetchCustomers({ pageIndex, pageSize, filters }),
-//     staleTime: 1000 * 60 * 1 // 1分钟缓存，减少重复请求
-//   });
+//   // 搜索框相关逻辑
+//   const [searchInput, setSearchInput] = useState('');
+//   const inputRef = useRef(null);
 
+//   // 搜索按钮点击或回车时触发搜索
+//   const handleSearch = () => {
+//     if (filters.name !== searchInput) {
+//       setFilters(prev => ({ ...prev, name: searchInput }));
+//       setPageIndex(0);
+//     }
+//   };
+
+//   // 清空搜索
+//   const handleClearSearch = () => {
+//     setSearchInput('');
+//     if (filters.name !== '') {
+//       setFilters(prev => ({ ...prev, name: '' }));
+//       setPageIndex(0);
+//     }
+//     // 自动聚焦
+//     setTimeout(() => {
+//       inputRef.current?.focus();
+//     }, 0);
+//   };
+
+//   // 输入框变化
+//   const handleInputChange = (e) => {
+//     setSearchInput(e.target.value);
+//     // 如果清空，自动刷新
+//     if (e.target.value === '') {
+//       if (filters.name !== '') {
+//         setFilters(prev => ({ ...prev, name: '' }));
+//         setPageIndex(0);
+//       }
+//     }
+//   };
+
+//   // 回车搜索
+//   const handleInputKeyDown = (e) => {
+//     if (e.key === 'Enter') {
+//       e.preventDefault();
+//       handleSearch();
+//     }
+//   };
+
+//   // 其他筛选项变化
 //   const handleFilterChange = (key, value) => {
 //     setFilters(prev => ({ ...prev, [key]: value }));
-//     setPageIndex(0); // 筛选条件变化时重置到第一页
+//     setPageIndex(0);
 //   };
 
 //   const handleEdit = (customer) => {
@@ -207,27 +103,139 @@ const CustomerList = () => {
 //   const handleFormSuccess = () => {
 //     setIsFormOpen(false);
 //     setEditingCustomer(null);
-//     refetch(); // 新增/编辑成功后刷新列表
+//     refetch();
 //   };
 
-//   // 加载状态处理
+//   const { data, isLoading, isError, refetch } = useQuery({
+//     queryKey: ['customers', pageIndex, filters],
+//     queryFn: () => fetchCustomers({ pageIndex, pageSize, filters })
+//   });
+
 //   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-//   // 错误状态处理
-//   if (isError) return (
-//     <div className="text-center py-10 text-red-500">
-//       加载数据失败
-//       <Button 
-//         variant="ghost" 
-//         size="sm" 
-//         className="ml-2" 
-//         onClick={() => refetch()}
-//       >
-//         重试
-//       </Button>
-//     </div>
-//   );
-//   // 防止数据未加载时的报错（安全处理）
-//   if (!data) return null; JSX后端！！
+//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+// 导入后端接口
+import { getCustomerList } from '@/apis/main';
+
+// 通过接口获取客户数据（替代模拟数据）
+const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
+  const response = await getCustomerList({
+    pageIndex,         // 前端页码从0开始，直接传递给后端
+    pageSize,
+    name: filters.name || '',
+    region: filters.region || '',
+    industry: filters.industry || '',
+    creditRating: filters.creditRating || '' // 新增信用等级筛选参数
+  });
+  return response.data;
+};
+
+const CustomerList = () => {
+  // 分页参数（前端页码从0开始）
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 10;
+
+  // 筛选条件（包含新增的信用等级）
+  const [filters, setFilters] = useState({
+    name: '',          // 客户名称
+    region: '',        // 地区编码
+    industry: '',      // 行业编码
+    creditRating: ''   // 信用等级编码
+  });
+
+  // 表单相关状态
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+
+  // 搜索框相关状态
+  const [searchInput, setSearchInput] = useState('');
+  const inputRef = useRef(null);
+
+  // 搜索按钮点击或回车时触发搜索
+  const handleSearch = () => {
+    if (filters.name !== searchInput) {
+      setFilters(prev => ({ ...prev, name: searchInput }));
+      setPageIndex(0); // 搜索条件变化，重置到第一页
+    }
+  };
+
+  // 清空搜索
+  const handleClearSearch = () => {
+    setSearchInput('');
+    if (filters.name !== '') {
+      setFilters(prev => ({ ...prev, name: '' }));
+      setPageIndex(0);
+    }
+    // 自动聚焦搜索框
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  // 搜索框输入变化
+  const handleInputChange = (e) => {
+    setSearchInput(e.target.value);
+    // 输入框清空时，自动刷新列表
+    if (e.target.value === '' && filters.name !== '') {
+      setFilters(prev => ({ ...prev, name: '' }));
+      setPageIndex(0);
+    }
+  };
+
+  // 搜索框回车事件
+  const handleInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
+  // 筛选条件变化（地区/行业/信用等级）
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPageIndex(0); // 筛选条件变化，重置到第一页
+  };
+
+  // 编辑客户
+  const handleEdit = (customer) => {
+    setEditingCustomer(customer);
+    setIsFormOpen(true);
+  };
+
+  // 表单提交成功后刷新列表
+  const handleFormSuccess = () => {
+    setIsFormOpen(false);
+    setEditingCustomer(null);
+    refetch(); // 强制刷新数据
+  };
+
+  // 使用React Query获取客户列表
+  const { data, isLoading, isError, refetch } = useQuery({
+    // 查询键包含所有影响数据的参数，确保参数变化时重新请求
+    queryKey: ['customers', pageIndex, pageSize, filters],
+    queryFn: () => fetchCustomers({ pageIndex, pageSize, filters }),
+    staleTime: 1000 * 60 * 1 // 1分钟缓存，减少重复请求
+  });
+
+  // 加载状态处理
+  if (isLoading) return <div className="text-center py-10">加载中...</div>;
+  
+  // 错误状态处理
+  if (isError) return (
+    <div className="text-center py-10 text-red-500">
+      加载数据失败
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="ml-2" 
+        onClick={() => refetch()}
+      >
+        重试
+      </Button>
+    </div>
+  );
+
+  if (!data) return null;
 
   return (
     <div className="space-y-6">
@@ -306,7 +314,7 @@ const CustomerList = () => {
                 <SelectItem value="华中">华中</SelectItem>
                 <SelectItem value="西南">西南</SelectItem> */}
                 {REGION_OPTIONS.map((option) => (
-                  <SelectItem key={option.code} value={option.code}>
+                  <SelectItem key={option.code} value={option.name}>
                     {option.code} {option.name}
                   </SelectItem>
                 ))}
@@ -335,7 +343,7 @@ const CustomerList = () => {
                 <SelectItem value="互联网">互联网</SelectItem>
                 <SelectItem value="教育">教育</SelectItem> */}
                 {INDUSTRY_OPTIONS.map((option) => (
-                  <SelectItem key={option.code} value={option.code}>
+                  <SelectItem key={option.code} value={option.name}>
                     {option.code} {option.name}
                   </SelectItem>
                 ))}
@@ -388,7 +396,7 @@ const CustomerList = () => {
                     <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{getIndustryLabel(customer.industry)}</TableCell>
                     <TableCell>{customer.company}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
-                    <TableCell>{customer.contacts?.[0]?.name || '—'}</TableCell>
+                    <TableCell>{customer.contact || '—'}</TableCell>
                     {/* 返回联系人下拉框数组中的姓名 */}
                     <TableCell className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]">
                       <span className={`px-2 py-1 rounded-full text-s ...`}>

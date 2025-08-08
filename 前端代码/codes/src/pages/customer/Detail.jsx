@@ -8,64 +8,91 @@ import { formatDate } from '@/lib/utils';
 import { getRegionLabel, getIndustryLabel } from '@/constants/options';
 import { getCreditRatingLabel } from '@/constants/options';
 
-// 模拟API获取客户详情
+// // HXY前端模拟数据测试
 // const fetchCustomerDetail = async (id) => {
-//   // 模拟API延迟
-//   await new Promise(resolve => setTimeout(resolve, 500));
-  
-//   // 模拟数据
-//   return {
-//     id,
-//     name: `客户${id.substring(1)}`,
-//     type: ['普通客户', 'VIP客户', '战略客户'][id.charCodeAt(1) % 3],
-//     region: ['华东', '华北', '华南', '华中', '西南'][id.charCodeAt(1) % 5],
-//     industry: ['制造业', '零售业', '金融业', '互联网', '教育'][id.charCodeAt(1) % 5],
-//     company: `公司${id.substring(1)}`, // 新增
-//     phone: `021-${Math.floor(10000000 + Math.random() * 90000000)}`, // 新增
-//     creditRating: ['AAA', 'AA', 'A', 'BBB', 'BB'][id.charCodeAt(1) % 5],
-//     address: `地址${id.substring(1)}`,
-//     createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
-//     modifiedAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(), //新增
-//     modifiedBy: `用户${id.substring(1)}`, //新增 与登录用户名一致
-//     contacts: Array.from({ length: 3 }, (_, i) => ({
-//       id: `CT${1000 + i}`,
-//       name: `联系人${i + 1}`,
-//       position: ['销售经理', '采购主管', '财务总监'][i],
-//       phone: `138${Math.floor(10000000 + Math.random() * 90000000)}`,
-//       email: `contact${i + 1}@company.com`,
-//       // isPrimary: i === 0
-//     })),
-//     remarks: `这是客户${id.substring(1)}的备注信息。`, //新增
-//     businessHistory: Array.from({ length: 12 }, (_, i) => ({
-//       id: `TR${1000 + i}`,
-//       date: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
-//       amount: Math.floor(10000 + Math.random() * 90000),
-//       product: `产品${i + 1}`,
-//       status: ['已完成', '进行中', '已取消'][i % 3]
-//     }))
-//   };
+//   console.log('请求客户详情，ID =', id); // 调试信息
+//   const res = await fetch(`/api/customer/detail/${id}`);
+//   if (!res.ok) throw new Error('请求失败'); // 处理请求错误
+//   const json = await res.json();
+//   return json.info;
 // };
+// // 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
 
-// HXY前端模拟数据测试
+// const CustomerDetail = () => {
+//   const { id } = useParams();
+//   const { data: customer, isLoading, isError } = useQuery({
+//     queryKey: ['customer', id],
+//     queryFn: () => fetchCustomerDetail(id),
+//     enabled: !!id  // 新增！只有在 id 不为空时才执行
+//   });
+
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+// 导入后端接口（新增）
+import { getCustomerDetail } from '@/apis/main';
+
+// 使用后端接口获取客户详情（修改）
 const fetchCustomerDetail = async (id) => {
-  console.log('请求客户详情，ID =', id); // 调试信息
-  const res = await fetch(`/api/customer/detail/${id}`);
-  if (!res.ok) throw new Error('请求失败'); // 处理请求错误
-  const json = await res.json();
-  return json.info;
+  console.log('请求客户详情，ID =', id);
+  const response = await getCustomerDetail(id); // 调用封装的接口
+  return response;
 };
-// 测试！fetchCustomerDetail只负责请求和获取数据，由后端返回数据。
 
 const CustomerDetail = () => {
   const { id } = useParams();
-  const { data: customer, isLoading, isError } = useQuery({
-    queryKey: ['customer', id],
+  
+  // 使用React Query请求数据（优化）
+  const { data: customer, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['customerDetail', id], // 缓存键包含ID，确保唯一性
     queryFn: () => fetchCustomerDetail(id),
-    enabled: !!id  // 新增！只有在 id 不为空时才执行
+    enabled: !!id, // 只有ID存在时才发起请求
+    staleTime: 1000 * 60 * 5, // 5分钟缓存，减少重复请求
   });
 
-  if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+  // 加载状态处理（优化）
+  if (isLoading) {
+    return (
+      <div className="text-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">加载客户详情中...</p>
+      </div>
+    );
+  }
+
+  // 错误状态处理（新增）
+  if (isError) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-500 mb-4">
+          加载失败：{error instanceof Error ? error.message : '未知错误'}
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={() => refetch()}
+          className="border-blue-300 text-blue-600"
+        >
+          重试
+        </Button>
+      </div>
+    );
+  }
+
+  // 数据为空处理（新增）
+  if (!customer) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500">未找到该客户的信息</p>
+        <Button 
+          asChild 
+          variant="outline" 
+          className="mt-4"
+        >
+          <Link to="/customer/list">返回客户列表</Link>
+        </Button>
+      </div>
+    );
+  }
 
 // // 导入API函数
 // import { getCustomerDetail } from '@/apis/main';
@@ -195,8 +222,14 @@ const CustomerDetail = () => {
                     <p className="mt-1">{customer.address}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">已上传附件</label>
-                    <p className="mt-1">{customer.attachments}</p>
+                    <label className="text-sm font-medium text-gray-500">上传附件</label>
+                      <p className="mt-1">
+                      {Array.isArray(customer.attachments) && customer.attachments.length > 0 
+                        ? '已上传' 
+                        : '未上传'
+                      }
+                      </p>
+                      <p className="mt-1">{customer.attachments}</p>
                   </div>
                 </div>
                 
