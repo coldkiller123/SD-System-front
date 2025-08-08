@@ -80,11 +80,48 @@ const Login = () => {
 
   // 模拟用户角色数据（保持不变）
   const mockUsers = {
-    'sales': { password: 'sales123', role: '销售代表', name: '销售小孙' },
-    'manager': { password: 'manager123', role: '销售经理', name: '销售组长凝凝子' },
-    'warehouse': { password: 'warehouse123', role: '仓库管理员', name: '炼乳会' },
-    'finance': { password: 'finance123', role: '财务人员', name: '缰绳喜' },
-    'admin': { password: 'admin123', role: '系统管理员', name: 'codekiller神' }
+    'sales1': { 
+      password: 'sales123', 
+      role: '销售代表', 
+      name: '销售小孙',
+      phone: '13811112222',
+      email: 'xiaosun@example.com'
+    },
+    'sales2': { 
+      password: 'sales234', 
+      role: '销售代表', 
+      name: '销售小何',
+      phone: '13822223333',
+      email: 'xiaohe@example.com'
+    },
+    'manager': { 
+      password: 'manager123', 
+      role: '销售经理', 
+      name: '销售组长凝凝子',
+      phone: '13911112222',
+      email: 'ningningzi@example.com'
+    },
+    'warehouse': { 
+      password: 'warehouse123', 
+      role: '仓库管理员', 
+      name: '炼乳会',
+      phone: '13922223333',
+      email: 'lianruhui@example.com'
+    },
+    'finance': { 
+      password: 'finance123', 
+      role: '财务人员', 
+      name: '缰绳喜',
+      phone: '13933334444',
+      email: 'jiangshangxi@example.com'
+    },
+    'admin': { 
+      password: 'admin123', 
+      role: '系统管理员', 
+      name: 'codekiller神',
+      phone: '13944445555',
+      email: 'codekiller@example.com'
+    }
   };
 
   // 登录逻辑（完全保持不变）
@@ -155,6 +192,8 @@ const Login = () => {
         username,
         name: user.name,
         role: user.role,
+        phone: user.phone,
+        email: user.email,
         loginTime: new Date().toISOString(),
         ip: '192.168.1.100' // 模拟IP
       };

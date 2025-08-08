@@ -129,6 +129,17 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
   // };
   const onSubmit = async (data) => {
     try {
+      
+      // 获取当前登录用户
+      const currentUser = getCurrentUser();
+      const now = new Date().toISOString();
+
+      // 如果是修改客户，追加修改时间和修改人
+      if (initialData) {
+        data.modifiedAt = now;
+        data.modifiedBy = currentUser.name || currentUser.username || '未知用户';
+      }
+
       let response;
       let isCreate = !initialData;
       if (isCreate) {
