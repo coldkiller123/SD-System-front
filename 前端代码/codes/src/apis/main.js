@@ -181,7 +181,6 @@ export const updateOrder = async (id, data) => {
 
 
 
-
 /**
  * 获取销售订单详情（含操作历史）
  * @param {string} id - 订单编号（必填）
@@ -200,25 +199,61 @@ export const getOrderDetail = async (id) => {
 
 
 
+/**
+ * 获取询价单列表（适配新接口）
+ * @param {Object} params - 请求参数
+ * @param {number} [params.pageIndex=0] - 当前页码（从0开始，默认0）
+ * @param {number} [params.pageSize=10] - 每页数量（默认10）
+ * @param {string} [params.search] - 统一搜索关键词（用于匹配询价单号和客户名称）
+ * @param {string} [params.status] - 状态筛选（未报价/已报价）
+ * @returns {Promise} - 包含询价单列表和分页信息的响应
+ */
+export const getInquiries = async (params = {}) => {
+  // 设置默认参数
+  const defaultParams = {
+    pageIndex: 0,
+    pageSize: 10,
+    ...params
+  };
+
+  // 构建查询参数（仅传递有效参数）
+  const validParams = Object.entries(defaultParams).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+
+  const response = await request.get('/api/inquiries', { params: validParams });
+  return response;
+};
+
 
 /**
- * 询价单列表
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ * 创建询价单接口
+ * @param {Object} data - 询价单数据
+ * @returns {Promise} - 接口响应
  */
+export const createInquiry = async (data) => {
+  const response = await fetch('/api/inquiries', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // 可添加认证信息
+      // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify(data),
+  });
 
+  const result = await response.json();
 
-/**
- * 更新询价单状态
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
- */
+  if (!response.ok) {
+    throw new Error(result.message || '创建询价单失败');
+  }
 
-/**
- * 创建询价单
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
- */
+  return result;
+};
+
 
 
 

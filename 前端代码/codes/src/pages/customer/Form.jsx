@@ -187,7 +187,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
     form.setValue(`contacts.${index}.email`, contact.email);
     setContactOptions([]);
   };
-  // 联系人下拉框，新增
+
 
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);

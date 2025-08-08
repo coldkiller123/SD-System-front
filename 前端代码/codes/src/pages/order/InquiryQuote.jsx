@@ -10,95 +10,218 @@ import { Search, Plus, Filter, Download, Eye, CheckCircle, XCircle, X } from 'lu
 import { formatDate } from '@/lib/utils';
 import CreateInquiry from './CreateInquiry.jsx';
 
-// 获取询价单数据（通过接口）
-const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
-  const params = new URLSearchParams();
-  if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
-  if (pageSize !== undefined) params.append('pageSize', pageSize);
-  // 合并后的搜索参数
-  if (filters.search) params.append('search', filters.search);
-  if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+// // 获取询价单数据（通过接口）
+// const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
+//   const params = new URLSearchParams();
+//   if (pageIndex !== undefined) params.append('pageIndex', pageIndex);
+//   if (pageSize !== undefined) params.append('pageSize', pageSize);
+//   // 合并后的搜索参数
+//   if (filters.search) params.append('search', filters.search);
+//   if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
-  const res = await fetch(`/api/inquiries?${params.toString()}`);
-  if (!res.ok) throw new Error('网络错误');
-  return await res.json();
+//   const res = await fetch(`/api/inquiries?${params.toString()}`);
+//   if (!res.ok) throw new Error('网络错误');
+//   return await res.json();
+// };
+
+// const InquiryQuote = () => {
+//   const [pageIndex, setPageIndex] = useState(0);
+//   // 合并后的搜索参数
+//   const [filters, setFilters] = useState({
+//     search: '',
+//     status: ''
+//   });
+//   // 搜索输入框内容
+//   const [searchInput, setSearchInput] = useState('');
+//   const inputRef = useRef(null);
+
+//   const [isFormOpen, setIsFormOpen] = useState(false);
+
+//   const pageSize = 10;
+
+//   const { data, isLoading, isError, refetch } = useQuery({
+//     queryKey: ['inquiries', pageIndex, pageSize, filters],
+//     queryFn: () => fetchInquiries({ pageIndex, pageSize, filters })
+//   });
+
+//   const handleFilterChange = (key, value) => {
+//     setFilters(prev => ({ ...prev, [key]: value }));
+//     setPageIndex(0);
+//   };
+
+//   // 搜索按钮点击或回车时触发搜索
+//   const handleSearch = () => {
+//     if (filters.search !== searchInput) {
+//       setFilters(prev => ({ ...prev, search: searchInput }));
+//       setPageIndex(1);
+//     }
+//   };
+
+//   // 清空搜索
+//   const handleClearSearch = () => {
+//     setSearchInput('');
+//     setFilters(prev => ({ ...prev, search: '' }));
+//     setPageIndex(1);
+//     inputRef.current && inputRef.current.focus();
+//   };
+
+//   // 输入框回车事件
+//   const handleInputKeyDown = (e) => {
+//     if (e.key === 'Enter') {
+//       handleSearch();
+//     }
+//   };
+
+//   // 输入框内容变化
+//   const handleInputChange = (e) => {
+//     setSearchInput(e.target.value);
+//     // 如果清空内容，自动刷新为全部
+//     if (e.target.value === '') {
+//       setFilters(prev => ({ ...prev, search: '' }));
+//       setPageIndex(1);
+//     }
+//   };
+
+//   const handleUpdateStatus = (inquiryId, newStatus) => {
+//     // 在实际应用中，这里会调用API更新状态
+//     console.log(`更新询价单 ${inquiryId} 状态为 ${newStatus}`);
+//     refetch();
+//   };
+
+//   const handleFormSuccess = () => {
+//     setIsFormOpen(false);
+//     refetch();
+//   };
+
+//   if (isLoading) return <div className="text-center py-10">加载中...</div>;
+//   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+
+//   // 计算显示范围
+//   const startItem = (pageIndex - 1) * pageSize + 1;
+//   const endItem = Math.min(pageIndex * pageSize, data?.total || 0);
+
+// 导入封装的接口
+import { getInquiries } from '@/apis/main';
+
+// 获取询价单数据（使用封装的接口）
+const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
+  // 构建参数对象
+  const params = {
+    pageIndex,
+    pageSize,
+    // 搜索参数：仅当有值时才传递search
+    ...(filters.search && { search: filters.search }),
+    // 状态筛选参数：仅当不是"all"时才传递status
+    ...(filters.status && filters.status !== 'all' && { status: filters.status })
+  };
+
+  // 调用封装的接口
+  const response = await getInquiries(params);
+  return response;
 };
 
 const InquiryQuote = () => {
-  const [pageIndex, setPageIndex] = useState(0);
-  // 合并后的搜索参数
+  const [pageIndex, setPageIndex] = useState(0); // 页码从0开始
   const [filters, setFilters] = useState({
-    search: '',
-    status: ''
+    search: '', // 统一搜索关键词（用于匹配单号和客户名称）
+    status: 'all' // 状态筛选
   });
-  // 搜索输入框内容
-  const [searchInput, setSearchInput] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // 搜索框输入缓存
   const inputRef = useRef(null);
-
   const [isFormOpen, setIsFormOpen] = useState(false);
-
   const pageSize = 10;
 
+  // 查询询价单列表
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['inquiries', pageIndex, pageSize, filters],
-    queryFn: () => fetchInquiries({ pageIndex, pageSize, filters })
+    queryFn: () => fetchInquiries({ pageIndex, pageSize, filters }),
+    keepPreviousData: true // 翻页时保留上一页数据，提升体验
   });
 
+  // 处理筛选条件变化（状态筛选）
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
-    setPageIndex(0);
+    setPageIndex(0); // 筛选变化重置到第0页
   };
 
-  // 搜索按钮点击或回车时触发搜索
+  // 执行搜索（点击搜索按钮或回车）
   const handleSearch = () => {
     if (filters.search !== searchInput) {
       setFilters(prev => ({ ...prev, search: searchInput }));
-      setPageIndex(1);
+      setPageIndex(0); // 搜索后重置到第0页
     }
   };
 
   // 清空搜索
   const handleClearSearch = () => {
     setSearchInput('');
-    setFilters(prev => ({ ...prev, search: '' }));
-    setPageIndex(1);
-    inputRef.current && inputRef.current.focus();
+    if (filters.search) {
+      setFilters(prev => ({ ...prev, search: '' }));
+      setPageIndex(0);
+    }
+    inputRef.current?.focus();
   };
 
-  // 输入框回车事件
+  // 搜索框输入事件
   const handleInputKeyDown = (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       handleSearch();
     }
   };
 
-  // 输入框内容变化
+  // 搜索框内容变化
   const handleInputChange = (e) => {
     setSearchInput(e.target.value);
-    // 如果清空内容，自动刷新为全部
-    if (e.target.value === '') {
+    // 输入框清空时自动刷新
+    if (e.target.value === '' && filters.search) {
       setFilters(prev => ({ ...prev, search: '' }));
-      setPageIndex(1);
+      setPageIndex(0);
     }
   };
 
-  const handleUpdateStatus = (inquiryId, newStatus) => {
-    // 在实际应用中，这里会调用API更新状态
-    console.log(`更新询价单 ${inquiryId} 状态为 ${newStatus}`);
-    refetch();
+  // 标记为已报价
+  const handleUpdateStatus = async (inquiryId) => {
+    if (window.confirm(`确定要将询价单 ${inquiryId} 标记为已报价吗？`)) {
+      try {
+        // 实际项目中调用更新接口
+        // await updateInquiryStatus(inquiryId, '已报价');
+        refetch(); // 刷新列表
+        alert(`询价单 ${inquiryId} 已更新为已报价`);
+      } catch (err) {
+        alert(`更新失败：${err.message || '服务器错误'}`);
+      }
+    }
   };
 
+  // 创建询价单成功后刷新
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     refetch();
   };
 
+  // 加载状态处理
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
-  if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
+  
+  // 错误状态处理
+  if (isError) return (
+    <div className="text-center py-10 text-red-500">
+      加载数据失败
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="ml-2 mt-2"
+        onClick={refetch}
+      >
+        重试
+      </Button>
+    </div>
+  );
 
-  // 计算显示范围
-  const startItem = (pageIndex - 1) * pageSize + 1;
-  const endItem = Math.min(pageIndex * pageSize, data?.total || 0);
+  // 空数据处理
+  const inquiries = data?.inquiries || [];
+  const total = data?.total || 0;
+  const pageCount = data?.pageCount || 0;
 
   return (
     <div className="space-y-6">
