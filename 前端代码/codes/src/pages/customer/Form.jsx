@@ -12,6 +12,7 @@ import { validatePhone } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
 import { useState, useEffect } from 'react'; // 新增
 import { REGION_OPTIONS, INDUSTRY_OPTIONS } from '@/constants/options';
+import { ALL_CONTACTS } from '@/constants/contacts';
 
 // 获取当前登录用户信息
 const getCurrentUser = () => {
@@ -181,11 +182,8 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
   const handleContactSearch = async (keyword) => {
     setSearchLoading(true);
     try {
-      const res = await fetch(`/api/contacts/search?name=${encodeURIComponent(keyword)}`);
-      const json = await res.json();
-      setContactOptions(json.contacts || []);
-    } catch (err) {
-      console.error('联系人搜索失败:', err);
+      const filtered = ALL_CONTACTS.filter(c => c.name.includes(keyword));
+      setContactOptions(filtered);
     } finally {
       setSearchLoading(false);
     }
@@ -614,7 +612,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                   </div>
                 </div>
               ))}
-              
+{/*               
               <Button 
                 type="button" 
                 variant="outline" 
@@ -623,7 +621,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                 disabled={contactFieldsDisabled}
               >
                 <Plus className="h-4 w-4 mr-2" /> 添加联系人
-              </Button>
+              </Button> */}
             </div>
             
             <div className="border-t border-gray-200 pt-6">
