@@ -101,7 +101,7 @@ import CreateInquiry from './CreateInquiry.jsx';
 //   const endItem = Math.min(pageIndex * pageSize, data?.total || 0);
 
 // 导入封装的接口
-import { getInquiries } from '@/apis/main';
+import { getInquiries, updateInquiryStatus } from '@/apis/main';
 
 // 获取询价单数据（使用封装的接口）
 const fetchInquiries = async ({ pageIndex, pageSize, filters }) => {
@@ -127,6 +127,7 @@ const InquiryQuote = () => {
     status: 'all' // 状态筛选
   });
   const [searchInput, setSearchInput] = useState(''); // 搜索框输入缓存
+  const [isUpdating, setIsUpdating] = useState(false); 
   const inputRef = useRef(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const pageSize = 10;
@@ -180,19 +181,31 @@ const InquiryQuote = () => {
     }
   };
 
-  // 标记为已报价
   const handleUpdateStatus = async (inquiryId) => {
-    if (window.confirm(`确定要将询价单 ${inquiryId} 标记为已报价吗？`)) {
-      try {
-        // 实际项目中调用更新接口
-        // await updateInquiryStatus(inquiryId, '已报价');
-        refetch(); // 刷新列表
-        alert(`询价单 ${inquiryId} 已更新为已报价`);
-      } catch (err) {
-        alert(`更新失败：${err.message || '服务器错误'}`);
-      }
+    if (!window.confirm(`确定要将询价单 ${inquiryId} 标记为已报价吗？`)) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      // 获取当前操作人（实际项目中从登录信息获取，这里临时写死）
+      const currentUser = '销售员1';
+      
+      await updateInquiryStatus(inquiryId, {
+        status: '已报价',
+        user: currentUser
+      });
+
+      refetch();
+      alert(`询价单 ${inquiryId} 已成功更新为已报价`);
+    } catch (err) {
+      console.error('更新状态失败:', err);
+      alert(`更新失败：${err.response?.data?.message || err.message || '服务器错误'}`);
+    } finally {
+      setIsUpdating(false);
     }
   };
+
 
   // 创建询价单成功后刷新
   const handleFormSuccess = () => {
@@ -330,7 +343,8 @@ const InquiryQuote = () => {
                         <Button 
                           size="sm" 
                           className="bg-green-600 hover:bg-green-700"
-                          onClick={() => handleUpdateStatus(inquiry.inquiryId, '已报价')}
+                          onClick={() => handleUpdateStatus(inquiry.inquiryId)}
+                          disabled={isUpdating} 
                         >
                           <CheckCircle className="mr-1 h-4 w-4" /> 标记为已报价
                         </Button>

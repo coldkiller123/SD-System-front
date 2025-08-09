@@ -235,23 +235,15 @@ export const getInquiries = async (params = {}) => {
  * @returns {Promise} - 接口响应
  */
 export const createInquiry = async (data) => {
-  const response = await fetch('/api/inquiries', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      // 可添加认证信息
-      // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify(data),
-  });
+  // 使用封装的request工具发送POST请求
+  return await request.post('/api/inquiries', data);
+};
 
-  const result = await response.json();
 
-  if (!response.ok) {
-    throw new Error(result.message || '创建询价单失败');
-  }
 
-  return result;
+//更新询价单状态
+export const updateInquiryStatus = async (inquiryId, statusData) => {
+  return await request.put(`/api/inquiries/${inquiryId}/status`, statusData);
 };
 
 

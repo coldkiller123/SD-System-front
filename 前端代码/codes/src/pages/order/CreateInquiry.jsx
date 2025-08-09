@@ -17,75 +17,8 @@ import { zhCN } from 'date-fns/locale';
 import { CustomerSearch } from '@/components/CustomerSearch';
 import { ProductSelector } from '@/components/ProductSelector';
 import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'; // 弹窗组件
 
-// // 表单验证规则
-// const formSchema = z.object({
-//   customerId: z.string().min(1, '请选择客户'),
-//   productName: z.string().min(1, '请选择商品'),
-//   quantity: z.number().min(1, '数量至少为1'),
-//   productId: z.string().min(1, '商品ID不能为空'),
-//   inquiryDate: z.date(),
-//   remarks: z.string().optional(),
-// });
-
-// // // 模拟商品数据
-// // const products = [
-// //   { id: 'P1001', name: '智能手机' },
-// //   { id: 'P1002', name: '笔记本电脑' },
-// //   { id: 'P1003', name: '平板电脑'},
-// //   { id: 'P1004', name: '智能手表'},
-// //   { id: 'P1005', name: '无线耳机' },
-// //   { id: 'P1006', name: '蓝牙音箱'},
-// //   { id: 'P1007', name: '数码相机'},
-// //   { id: 'P1008', name: '游戏主机'},
-// // ];
-
-// const CreateInquiry = ({ onSuccess, onCancel }) => {
-//   const form = useForm({
-//     resolver: zodResolver(formSchema),
-//     defaultValues: {
-//       customerId: '',
-//       productName: '',
-//       quantity: 1,
-//       productId: '',
-//       inquiryDate: new Date(),
-//       remarks: '',
-//     }
-//   });
-
-//   const onSubmit = (data) => {
-//     // 生成唯一询价单号
-//     const inquiryId = 'IQ' + generateId().substring(0, 5);
-    
-//     // 获取当前用户作为销售人员
-//     const salesPerson = '管理员'; // 实际应用中应从登录信息获取
-    
-//     const inquiryData = {
-//       inquiryId, // 统一使用 inquiryId
-//       ...data,
-//       salesPerson,
-//       status: '未报价',
-//       createdAt: new Date().toISOString()
-//     };
-    
-//     console.log('询价单提交成功:', inquiryData);
-//     onSuccess();
-//   };
-
-//   // 处理商品选择
-//   const handleProductSelect = (productId) => {
-//     const product = products.find(p => p.id === productId);
-//     if (product) {
-//       form.setValue('productName', product.name);
-//       form.setValue('productId', product.id);
-//     }
-//   };
-
-//   // 处理从商品详情弹窗选择商品
-//   const handleSelectProductFromDialog = (product) => {
-//     form.setValue('productName', product.name);
-//     form.setValue('productId', product.id);
-//   };
 
 // 导入接口封装
 import { createInquiry } from '@/apis/main';
@@ -103,6 +36,14 @@ const formSchema = z.object({
 const CreateInquiry = ({ onSuccess, onCancel }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false); 
+  const [currentInquiryId, setCurrentInquiryId] = useState(''); 
+
+  const handleDialogConfirm = () => {
+    setSuccessDialogOpen(false); // 关闭弹窗
+    onSuccess({ inquiryId: currentInquiryId }); // 调用父组件的返回逻辑
+  };
+
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -130,32 +71,37 @@ const CreateInquiry = ({ onSuccess, onCancel }) => {
     }
   };
 
-  // 表单提交处理
   const onSubmit = async (data) => {
-    setIsSubmitting(true);
-    setErrorMsg('');
-    try {
-      // 格式化请求参数（转换日期为字符串）
-      const requestData = {
-        ...data,
-        inquiryDate: format(data.inquiryDate, 'yyyy-MM-dd'), // 匹配接口日期格式
-      };
+  setIsSubmitting(true);
+  setErrorMsg('');
+  try {
+    const requestData = {
+            customerId: data.customerId,
+            productName: data.productName,
+            productId: data.productId,
+            quantity: data.quantity,
+            unit: '个', // 固定单位
+            salesPerson: '销售员1', // 与APIPOST一致
+            inquiryDate: format(data.inquiryDate, 'yyyy-MM-dd'),
+            remarks: data.remarks || '', // 可选字段
+          };
 
-      // 调用接口
-      const response = await createInquiry(requestData);
-      
-      // 接口返回成功后触发回调
-      if (response.inquiryId) {
-        onSuccess(response); // 传递接口返回的询价单号
-      }
-    } catch (err) {
-      setErrorMsg(err.message || '创建询价单失败，请重试');
-    } finally {
-      setIsSubmitting(false);
+    const response = await createInquiry(requestData);
+    
+    if (response.inquiryId) {
+      setCurrentInquiryId(response.inquiryId); // 保存询价单号
+      setSuccessDialogOpen(true); // 打开成功弹窗
     }
-  };
+  } catch (err) {
+      setErrorMsg(err.message || '创建询价单失败，请重试');
+  } finally {
+      setIsSubmitting(false);
+  }
+};
+
 
   return (
+    <>
     <Card className="border-0 shadow-none">
       <CardHeader className="border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -338,6 +284,33 @@ const CreateInquiry = ({ onSuccess, onCancel }) => {
         </Form>
       </CardContent>
     </Card>
+    {/* 👇 新增：成功弹窗组件 */}
+    <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center text-green-600">
+            <Check className="h-5 w-5 mr-2" />
+            询价单创建成功
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <p>您的询价单号为：</p>
+          <p className="font-bold text-lg mt-2 text-center">{currentInquiryId}</p>
+          <p className="text-sm text-gray-500 mt-4 text-center">
+            请妥善保存单号以便后续查询
+          </p>
+        </div>
+        <DialogFooter>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 w-full"
+            onClick={handleDialogConfirm}
+          >
+            确定
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 };
 
