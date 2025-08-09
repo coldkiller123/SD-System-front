@@ -631,8 +631,8 @@ const DeliveryOrderList = () => {
                           <span
                             className={
                               order.status === '已发货'
-                                ? 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800'
-                                : 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-800'
+                                ? 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 whitespace-nowrap'
+                                : 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 whitespace-nowrap'
                             }
                           >
                             {order.status}

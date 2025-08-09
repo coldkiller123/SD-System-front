@@ -75,7 +75,7 @@ const Index = () => {
 
   // api/activity.js
  const fetchDashboardData = async () => {
-  const res = await fetch('/api/activities/latest');
+  const res = await fetch('http://localhost:8080/api/activities/latest');
   if (!res.ok) throw new Error('无法获取最近动态');
   return await res.json(); // 返回一个数组
 };
