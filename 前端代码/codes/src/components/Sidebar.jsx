@@ -7,12 +7,16 @@ import { usePermission } from '@/hooks/usePermission';
 import { toast } from 'sonner';
 
 const SidebarItem = ({ item, depth = 0, theme }) => {
+  
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { hasModulePermission } = usePermission();
   
-  const isActive = location.pathname === item.to;
+ const isActive = location.pathname === item.to;
   const hasPermission = hasModulePermission(item.title);
+
+  // Debug: log item title and permission
+  console.log("模块名称：", item.title, "权限：", hasPermission);
   
   // 根据主题设置样式
   const bgClass = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
@@ -95,6 +99,7 @@ const SidebarItem = ({ item, depth = 0, theme }) => {
 };
 
 export const Sidebar = ({ isOpen, toggleSidebar, theme }) => {
+  
   // 根据主题设置样式
   const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-white';
   const textClass = theme === 'dark' ? 'text-white' : 'text-blue-800';

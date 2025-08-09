@@ -15,6 +15,16 @@ export const RoleSelector = () => {
   const { currentRole, originalRole, canSwitchRole, switchRole, availableRoles } = usePermission();
   const [open, setOpen] = useState(false);
 
+  // 切换角色后，更新 currentRole 并刷新页面
+  const handleSwitchRole = (role) => {
+    switchRole(role); // 切换角色
+    setOpen(false); // 关闭下拉菜单
+    // 通过更新 currentRole，强制重新渲染页面
+    setTimeout(() => {
+      window.location.reload(); // 强制刷新页面
+    }, 100); // 延迟一点，确保角色切换完成后再刷新
+  };
+
   // 如果不是系统管理员，不显示角色选择器
   if (!canSwitchRole) {
     return (
@@ -57,7 +67,7 @@ export const RoleSelector = () => {
           {availableRoles.map((role) => (
             <DropdownMenuItem
               key={role}
-              onClick={() => switchRole(role)}
+              onClick={() => handleSwitchRole(role)} // 调用新的 handleSwitchRole 方法
               className={`cursor-pointer ${currentRole === role ? 'bg-blue-100 text-blue-800' : ''}`}
             >
               {role}
