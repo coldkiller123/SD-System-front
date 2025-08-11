@@ -58,6 +58,16 @@ const Login = () => {
     generateCaptcha();
   }, []);
 
+  // 在组件挂载时添加读取记住的账号逻辑
+useEffect(() => {
+  // 读取本地存储的记住账号
+  const rememberedUsername = localStorage.getItem('rememberedUsername');
+  if (rememberedUsername) {
+    setUsername(rememberedUsername);
+    setRememberMe(true); // 自动勾选"记住账号"复选框
+  }
+}, []);
+
   // 验证码倒计时（保持不变）
   useEffect(() => {
     let timer;
@@ -163,11 +173,14 @@ const Login = () => {
           ip: '192.168.1.100' // 模拟IP
         };
 
-        // 存储登录信息
-        localStorage.setItem('user', JSON.stringify(loginData));
-        if (rememberMe) {
-          localStorage.setItem('rememberedUsername', username);
-        }
+// 登录成功后添加以下逻辑（替换原有的rememberMe处理）
+if (rememberMe) {
+  // 记住账号：仅存储用户名
+  localStorage.setItem('rememberedUsername', username);
+} else {
+  // 不记住账号：清除存储的用户名
+  localStorage.removeItem('rememberedUsername');
+}
 
         // 记录登录日志
         console.log('登录日志:', loginData);
@@ -532,16 +545,7 @@ const Login = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember"
-                    checked={rememberMe}
-                    onCheckedChange={setRememberMe}
-                  />
-                  <label htmlFor="remember" className="text-sm text-gray-600 cursor-pointer">
-                    记住账号
-                  </label>
-                </div>
+、
                 <button
                   type="button"
                   onClick={() => setForgotPasswordOpen(true)}
@@ -581,7 +585,7 @@ const Login = () => {
 
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
-                © 2024 SD销售分发系统. 保留所有权利.
+                © 2025 SD销售分发系统. 保留所有权利.
               </p>
             </div>
           </CardContent>
