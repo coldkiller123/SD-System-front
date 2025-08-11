@@ -585,7 +585,7 @@ if (rememberMe) {
 
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
-                © 2024 SD销售分发系统. 保留所有权利.
+                © 2025 SD销售分发系统. 保留所有权利.
               </p>
             </div>
           </CardContent>
