@@ -30,7 +30,7 @@ const MODULES = [
     title: '发票管理',
     description: '处理发票开具、收款和财务对账',
     icon: FileText,
-    color: 'orange'
+    color: 'red'
   }
 ];
 
@@ -66,14 +66,15 @@ export const PermissionCard = ({ module, hasPermission, onClick }) => {
       
       <CardContent>
         <p className="text-sm text-gray-600 mb-3">{module.description}</p>
-        <Badge 
-          variant={hasPermission ? "default" : "secondary"}
-          className={cn(
-            hasPermission ? `bg-${module.color}-100 text-${module.color}-800` : "bg-gray-100 text-gray-600"
-          )}
-        >
-          {hasPermission ? '可访问' : '无权限'}
-        </Badge>
+      <Badge 
+  variant={hasPermission ? "default" : "secondary"}
+  className={cn(
+    hasPermission ? "bg-black text-white" : "bg-gray-100 text-gray-600"
+  )}
+>
+  {hasPermission ? '可访问' : '无权限'}
+</Badge>
+
       </CardContent>
     </Card>
   );

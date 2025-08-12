@@ -59,7 +59,7 @@ const Index = () => {
       title: '发票管理',
       description: '处理发票开具、收款和财务对账',
       icon: Receipt,
-      color: 'orange',
+      color: 'red',
       path: '/finance/invoice-management'
     }
   ];
