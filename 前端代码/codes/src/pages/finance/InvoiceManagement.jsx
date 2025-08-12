@@ -594,11 +594,23 @@ const InvoiceManagement = () => {
 
   // 打印函数
   const handlePrintClick = useCallback(() => {
+    if (!invoiceData || !invoiceData.invoiceId) {
+    console.error('发票数据未加载完成，无法打印');
+    alert('请等待发票生成并加载完成后再尝试打印');
+    return;
+  }
+    setTimeout(() => {
     window.print();
-  }, []);
+  }, 500); // 可根据实际渲染速度调整（300-1000ms）
+  }, [invoiceData]);
 
   // 导出PDF函数
   const handleExportPDFClick = useCallback(async (invoiceId) => {
+    if (!invoiceId) {
+    console.error('发票ID不存在，无法下载');
+    alert('请先生成完整发票再尝试下载');
+    return;
+  }
     const invoiceElement = document.getElementById('invoice-preview');
     if (!invoiceElement) return;
 
@@ -744,7 +756,9 @@ const InvoiceManagement = () => {
                       onClick={() => {
                         if (order.hasInvoice) {
                           setSelectedOrder(order);
-                          handleGenerateInvoice(order); // 查看已生成的发票
+                          setTimeout(() => {
+                            handleGenerateInvoice(order);
+                            }, 100); // 查看已生成的发票
                         }
                       }}
                     >
@@ -915,7 +929,7 @@ const InvoiceManagement = () => {
 
                       <Button 
                         className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => handleExportPDFClick(selectedOrder.invoiceId)}
+                        onClick={() => handleExportPDFClick(invoiceData?.invoiceId)}
                       >
                         <Download className="mr-2 h-4 w-4" /> 下载PDF
                       </Button>
