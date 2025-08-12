@@ -321,11 +321,37 @@ const DeliveryOrderList = () => {
     },
   });
 
-  // 批量操作loading
-  const [batchLoading, setBatchLoading] = useState(false);
+  /**
+   * 批量修改订单状态的mutation
+   */
+  const batchMutation = useMutation({
+    mutationFn: async (orderIds) => {
+      // 使用 Promise.allSettled 处理批量请求
+      const results = await Promise.allSettled(
+        orderIds.map(orderId => updateOrderStatusToCompleted(orderId))
+      );
+      
+      // 统计成功和失败的数量
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.filter(result => result.status === 'rejected').length;
+      
+      return { successful, failed, total: orderIds.length };
+    },
+    onSuccess: (data) => {
+      refetch();
+      setSelectedOrderIds([]);
+      if (data.failed > 0) {
+        window.alert(`批量操作完成：${data.successful}个成功，${data.failed}个失败`);
+      } else {
+        window.alert('批量操作成功！');
+      }
+    },
+    onError: () => {
+      window.alert('批量操作失败');
+    }
+  });
 
-  // 发货单详情卡片的批量设为已完成loading
-  const [detailBatchLoading, setDetailBatchLoading] = useState(false);
+
 
   // 搜索时重置到第一页
   useEffect(() => {
@@ -390,22 +416,8 @@ const DeliveryOrderList = () => {
   const handleBatchSetCompleted = async () => {
     if (selectedOrderIds.length === 0) return;
     if (!window.confirm('确定要将选中的订单状态批量修改为“已完成”吗？')) return;
-    setBatchLoading(true);
-    try {
-      // 并发批量调用状态修改接口
-      await Promise.all(
-        selectedOrderIds.map(orderId => updateOrderStatusToCompleted(orderId))
-      );
-      setSelectedOrderIds([]);
-      refetch();
-      window.alert('批量操作成功！');
-      window.location.reload();
-    } catch (e) {
-      window.alert(e.message || '批量操作失败');
-      window.location.reload();
-    } finally {
-      setBatchLoading(false);
-    }
+    // 使用批量mutation
+    batchMutation.mutate(selectedOrderIds);
   };
 
   // 查看发货单详情
@@ -432,7 +444,6 @@ const DeliveryOrderList = () => {
     const orderNo = currentOrder ? currentOrder.id : orderId;
     if (window.confirm(`确定要将订单号为「${orderNo}」的订单状态修改为“已完成”吗？`)) {
       mutation.mutate(orderId);
-      window.location.reload();
     }
   };
 
@@ -456,20 +467,8 @@ const DeliveryOrderList = () => {
       )
     )
       return;
-    setDetailBatchLoading(true);
-    try {
-      await Promise.all(
-        toCompleteOrders.map(order => updateOrderStatusToCompleted(order.id))
-      );
-      refetch();
-      window.alert('批量操作成功！');
-      window.location.reload();
-    } catch (e) {
-      window.alert(e.message || '批量操作失败');
-      window.location.reload();
-    } finally {
-      setDetailBatchLoading(false);
-    }
+    // 使用批量mutation
+    batchMutation.mutate(toCompleteOrders.map(order => order.id));
   };
 
   // 计算发货单详情卡片中“已发货”状态的订单数量
@@ -527,10 +526,10 @@ const DeliveryOrderList = () => {
               <Button
                 size="sm"
                 className="bg-green-600 hover:bg-green-700"
-                disabled={selectedCount === 0 || batchLoading}
+                disabled={selectedCount === 0 || batchMutation.isLoading}
                 onClick={handleBatchSetCompleted}
               >
-                {batchLoading ? '批量处理中...' : '批量设为已完成'}
+                {batchMutation.isLoading ? '批量处理中...' : '批量设为已完成'}
               </Button>
             </div>
           </CardTitle>
@@ -760,11 +759,11 @@ const DeliveryOrderList = () => {
                   !selectedDeliveryOrder ||
                   !selectedDeliveryOrder.orders ||
                   detailSelectableCount === 0 ||
-                  detailBatchLoading
+                  batchMutation.isLoading
                 }
                 onClick={handleDetailBatchSetCompleted}
               >
-                {detailBatchLoading ? '批量处理中...' : '全部设为已完成'}
+                {batchMutation.isLoading ? '批量处理中...' : '全部设为已完成'}
               </Button>
             </div>
           </CardTitle>
