@@ -399,8 +399,10 @@ const DeliveryOrderList = () => {
       setSelectedOrderIds([]);
       refetch();
       window.alert('批量操作成功！');
+      window.location.reload();
     } catch (e) {
       window.alert(e.message || '批量操作失败');
+      window.location.reload();
     } finally {
       setBatchLoading(false);
     }
@@ -429,7 +431,8 @@ const DeliveryOrderList = () => {
     const currentOrder = (data?.orders || []).find(order => order.id === orderId);
     const orderNo = currentOrder ? currentOrder.id : orderId;
     if (window.confirm(`确定要将订单号为「${orderNo}」的订单状态修改为“已完成”吗？`)) {
-      mutation.mutate(orderId); // 调用mutation，触发状态更新
+      mutation.mutate(orderId);
+      window.location.reload();
     }
   };
 
@@ -460,8 +463,10 @@ const DeliveryOrderList = () => {
       );
       refetch();
       window.alert('批量操作成功！');
+      window.location.reload();
     } catch (e) {
       window.alert(e.message || '批量操作失败');
+      window.location.reload();
     } finally {
       setDetailBatchLoading(false);
     }
