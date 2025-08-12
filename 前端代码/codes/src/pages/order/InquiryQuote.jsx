@@ -303,9 +303,7 @@ const InquiryQuote = () => {
               </SelectContent>
             </Select>
             
-            <Button variant="outline" className="border-blue-200 text-blue-600">
-              <Filter className="mr-2 h-4 w-4" /> 更多筛选
-            </Button>
+
           </div>
           
           <div className="border border-blue-100 rounded-lg overflow-hidden">
