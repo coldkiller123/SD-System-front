@@ -213,7 +213,7 @@ const { data, isLoading } = useQuery({
               onClick={() => navigate('/inventory/delivery-orders')}
               disabled={!permissions.inventory}
             >
-              <Package className="mr-2 h-4 w-4" /> 查看库存变化
+              <Package className="mr-2 h-4 w-4" /> 查看库存相关
             </Button>
           </CardContent>
         </Card>

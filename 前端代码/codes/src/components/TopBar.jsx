@@ -30,14 +30,7 @@ export const TopBar = ({ toggleSidebar, user, onLogout, theme }) => {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div className="relative w-64">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />
-            <Input 
-              type="search" 
-              placeholder="搜索客户、订单..." 
-              className={`pl-10 ${inputBgClass} ${placeholderClass} ${textClass}`}
-            />
-          </div>
+
         </div>
         
         <div className="flex items-center space-x-4">

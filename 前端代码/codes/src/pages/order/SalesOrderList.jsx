@@ -213,8 +213,6 @@ const SalesOrderList = () => {
                 <SelectItem value="all">全部状态</SelectItem>
                 <SelectItem value="待付款">待付款</SelectItem>
                 <SelectItem value="已付款">已付款</SelectItem>
-                <SelectItem value="已发货">已发货</SelectItem>
-                <SelectItem value="已完成">已完成</SelectItem>
                 <SelectItem value="已取消">已取消</SelectItem>
               </SelectContent>
             </Select>
