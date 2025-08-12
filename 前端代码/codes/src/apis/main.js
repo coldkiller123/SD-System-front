@@ -1,5 +1,4 @@
-import request from './request'; // 通常会创建一个axios实例并导出
-
+import request from './request'; 
 
 //HXY
 
@@ -8,6 +7,51 @@ import request from './request'; // 通常会创建一个axios实例并导出
  * @param {string} id - 客户ID
  * @returns {Promise} - 包含客户详情的Promise
  */
+export const createCustomer = async (customerData) => {
+  return await request.post('/customer/create', customerData);
+};
+
+
+//附件上传
+export const uploadCustomerAttachments = (customerId, files) => {
+  const formData = new FormData();
+  formData.append('id', customerId);
+  files.forEach(file => {
+    formData.append('file', file);
+  });
+
+  return request({
+    url: '/customer/upload',  
+    method: 'POST',          
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
+
+
+//文件预览接口
+export const previewAttachment = (filepath) => {
+  return request.get('/attachments/preview-by-filepath', {
+    params: {
+      filepath: filepath 
+    },
+    responseType: 'blob' 
+  });
+};
+
+
+
+//删除附件接口
+export const deleteAttachment = (filepath) => {
+  return request.delete('/attachments/delete-by-filepath', {
+    params: {
+      filepath: filepath 
+    }
+  });
+};
+
 
 
 /**
@@ -15,6 +59,16 @@ import request from './request'; // 通常会创建一个axios实例并导出
  * @param {string} id - 客户ID
  * @returns {Promise} - 包含客户详情的Promise
  */
+export const updateCustomer = async (customerData) => {
+  const { id, ...updateData } = customerData;
+    if (!id) {
+    throw new Error('客户ID不能为空'); // 明确抛出错误，便于调试
+  }
+  
+  console.log('更新客户ID:', id, '更新数据:', updateData);
+  
+  return await request.put(`/customer/update?id=${id}`, updateData);
+};
 
 
 

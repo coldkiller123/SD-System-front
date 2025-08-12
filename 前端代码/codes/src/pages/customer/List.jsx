@@ -115,12 +115,12 @@ import { CREDIT_RATING_OPTIONS, getCreditRatingLabel } from '@/constants/options
 //   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
 // 导入后端接口
-import { getCustomerList } from '@/apis/main';
+import { getCustomerList,getCustomerDetail } from '@/apis/main';
 
 // 通过接口获取客户数据（替代模拟数据）
 const fetchCustomers = async ({ pageIndex, pageSize, filters }) => {
   const response = await getCustomerList({
-    pageIndex,         // 前端页码从0开始，直接传递给后端
+    pageIndex: pageIndex + 1,        
     pageSize,
     name: filters.name || '',
     region: filters.region || '',
@@ -197,16 +197,22 @@ const CustomerList = () => {
   };
 
   // 编辑客户
-  const handleEdit = (customer) => {
-    setEditingCustomer(customer);
-    setIsFormOpen(true);
+  const handleEdit = async (customer) => {
+    try {
+      const fullCustomerData = await getCustomerDetail(customer.id);
+      setEditingCustomer(fullCustomerData);
+      setIsFormOpen(true);
+    } catch (error) {
+      console.error('获取客户详情失败:', error);
+      alert('编辑失败：无法获取客户完整信息，请重试');
+    }
   };
 
   // 表单提交成功后刷新列表
   const handleFormSuccess = () => {
     setIsFormOpen(false);
     setEditingCustomer(null);
-    refetch(); // 强制刷新数据
+    refetch();
   };
 
   // 使用React Query获取客户列表
@@ -430,7 +436,7 @@ const CustomerList = () => {
           
           <div className="mt-6 flex items-center justify-between">
             <div className="text-sm text-gray-600 whitespace-nowrap">
-              显示 {pageIndex * pageSize + 1} - {Math.min((pageIndex + 1) * pageSize, data.total)} 条，共 {data.total} 条记录
+              显示 {pageIndex * pageSize + 1} - {Math.min((pageIndex+1) * pageSize, data.total)} 条，共 {data.total} 条记录
             </div>
             
             <Pagination>
@@ -440,7 +446,7 @@ const CustomerList = () => {
                     href="#" 
                     onClick={(e) => {
                       e.preventDefault();
-                      if (pageIndex > 0) setPageIndex(pageIndex - 1);
+                      if (pageIndex > 0) setPageIndex(pageIndex-1);
                     }}
                     disabled={pageIndex === 0}
                   />
@@ -460,7 +466,7 @@ const CustomerList = () => {
                           setPageIndex(page);
                         }}
                       >
-                        {page + 1}
+                        {page+1}
                       </PaginationLink>
                     </PaginationItem>
                   );
@@ -471,9 +477,9 @@ const CustomerList = () => {
                     href="#" 
                     onClick={(e) => {
                       e.preventDefault();
-                      if (pageIndex < data.pageCount - 1) setPageIndex(pageIndex + 1);
+                      if (pageIndex < data.pageCount-1) setPageIndex(pageIndex + 1);
                     }}
-                    disabled={pageIndex === data.pageCount - 1}
+                    disabled={pageIndex === data.pageCount-1}
                   />
                 </PaginationItem>
               </PaginationContent>
