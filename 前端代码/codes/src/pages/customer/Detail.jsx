@@ -30,7 +30,7 @@ import { getCreditRatingLabel } from '@/constants/options';
 //   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
 // 导入后端接口（新增）
-import { getCustomerDetail } from '@/apis/main';
+import { getCustomerDetail , previewAttachment} from '@/apis/main';
 
 // 使用后端接口获取客户详情（修改）
 const fetchCustomerDetail = async (id) => {
@@ -42,13 +42,26 @@ const fetchCustomerDetail = async (id) => {
 const CustomerDetail = () => {
   const { id } = useParams();
   
-  // 使用React Query请求数据（优化）
   const { data: customer, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['customerDetail', id], // 缓存键包含ID，确保唯一性
     queryFn: () => fetchCustomerDetail(id),
     enabled: !!id, // 只有ID存在时才发起请求
     staleTime: 1000 * 60 * 5, // 5分钟缓存，减少重复请求
   });
+
+  const handlePreview = async (attachment) => {
+    try {
+      const blob = await previewAttachment(attachment.filepath);
+      const fileUrl = URL.createObjectURL(blob);
+      window.open(fileUrl, '_blank');
+      window.addEventListener('unload', () => {
+        URL.revokeObjectURL(fileUrl);
+      });
+    } catch (error) {
+      console.error('文件预览失败：', error);
+      alert('预览失败，请检查文件是否存在');
+    }
+  };
 
   // 加载状态处理（优化）
   if (isLoading) {
@@ -78,7 +91,7 @@ const CustomerDetail = () => {
     );
   }
 
-  // 数据为空处理（新增）
+
   if (!customer) {
     return (
       <div className="text-center py-20">
@@ -93,64 +106,6 @@ const CustomerDetail = () => {
       </div>
     );
   }
-
-// // 导入API函数
-// import { getCustomerDetail } from '@/apis/main';
-
-// const CustomerDetail = () => {
-//   const { id } = useParams(); // 从路由参数中获取客户ID
-
-//   // 使用React Query请求数据
-//   const { data: customer, isLoading, isError, error, refetch } = useQuery({
-//     queryKey: ['customerDetail', id], // 缓存键（包含ID确保唯一性）
-//     queryFn: () => getCustomerDetail(id), // 调用API函数
-//     enabled: !!id, // 只有ID存在时才发起请求
-//     staleTime: 1000 * 60 * 5, // 5分钟内不重复请求（可根据需求调整）
-//   });
-
-//   // 加载状态处理
-//   if (isLoading) {
-//     return (
-//       <div className="text-center py-20">
-//         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600 mx-auto"></div>
-//         <p className="mt-4 text-gray-600">加载客户详情中...</p>
-//       </div>
-//     );
-//   }
-
-//   // 错误状态处理
-//   if (isError) {
-//     return (
-//       <div className="text-center py-20">
-//         <p className="text-red-500 mb-4">
-//           加载失败：{error instanceof Error ? error.message : '未知错误'}
-//         </p>
-//         <Button 
-//           variant="outline" 
-//           onClick={() => refetch()}
-//           className="border-blue-300 text-blue-600"
-//         >
-//           重试
-//         </Button>
-//       </div>
-//     );
-//   }
-
-//   // 数据为空处理（防止后端返回空数据）
-//   if (!customer) {
-//     return (
-//       <div className="text-center py-20">
-//         <p className="text-gray-500">未找到该客户的信息</p>
-//         <Button 
-//           asChild 
-//           variant="outline" 
-//           className="mt-4"
-//         >
-//           <Link to="/customer/list">返回客户列表</Link>
-//         </Button>
-//       </div>
-//     );
-//   } JSX后端测试！！！
 
 
   return (
@@ -223,13 +178,35 @@ const CustomerDetail = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">上传附件</label>
-                      <p className="mt-1">
-                      {Array.isArray(customer.attachments) && customer.attachments.length > 0 
-                        ? '已上传' 
-                        : '未上传'
-                      }
-                      </p>
-                      <p className="mt-1">{customer.attachments}</p>
+                    {Array.isArray(customer.attachments) ? (
+                      customer.attachments.length > 0 ? (
+                        <ul className="mt-2 space-y-2">
+                          {customer.attachments.map((attachment, index) => (
+                            <li key={index} className="flex items-center text-blue-600">
+                              {/* 文件名点击预览 */}
+                              <span 
+                                className="cursor-pointer hover:underline"
+                                onClick={() => handlePreview(attachment)}
+                              >
+                                {attachment.filename}
+                              </span>
+                              {/* 查看按钮点击预览 */}
+                              <button 
+                                className="ml-2 text-sm text-blue-800 underline"
+                                onClick={() => handlePreview(attachment)}
+                                type="button"  // 避免表单提交行为
+                              >
+                                查看
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-1 text-gray-500">未上传</p>
+                      )
+                    ) : (
+                      <p className="mt-1 text-gray-500">暂无附件信息</p>
+                    )}
                   </div>
                 </div>
                 

@@ -7,12 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Plus, X, Upload, FileText } from 'lucide-react';
+import { Plus, X, Upload, FileText, Eye } from 'lucide-react';
 import { validatePhone } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
 import { useState, useEffect } from 'react'; // 新增
 import { REGION_OPTIONS, INDUSTRY_OPTIONS } from '@/constants/options';
 import { ALL_CONTACTS } from '@/constants/contacts';
+import SearchableSelect from '@/components/SearchableSelect';
+import { CREDIT_RATING_OPTIONS } from '@/constants/options';
+import { useToast } from '@/components/ui/use-toast';
 
 // 获取当前登录用户信息
 const getCurrentUser = () => {
@@ -22,9 +25,10 @@ const getCurrentUser = () => {
     return {};
   }
 };
-import SearchableSelect from '@/components/SearchableSelect';
-import { CREDIT_RATING_OPTIONS } from '@/constants/options';
-import { useToast } from '@/components/ui/use-toast';
+
+// 导入创建客户接口
+import { createCustomer,uploadCustomerAttachments,updateCustomer,previewAttachment, deleteAttachment } from '@/apis/main';
+import { format } from 'date-fns'; // 新增：用于格式化日期
 
 // 表单验证规则
 const formSchema = z.object({
@@ -54,130 +58,154 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
   const isSalesRep = currentUser.role === '销售代表' || currentUser.position === '销售代表';
   const isAdminOrManager = currentUser.role === '系统管理员' || currentUser.role === '销售经理' || currentUser.position === '系统管理员' || currentUser.position === '销售经理';
   
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);  
+
+  const [contactOptions, setContactOptions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const [existingAttachments, setExistingAttachments] = useState([]);
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState([]);
+
+  useEffect(() => {
+    if (initialData?.attachments) {
+      setExistingAttachments(initialData.attachments);
+    }
+  }, [initialData]);
+
+
   // 联系人字段是否禁用（销售代表时禁用）
   const contactFieldsDisabled = isSalesRep;
 
   const form = useForm({
-    resolver: zodResolver(formSchema),
-    // defaultValues: initialData || {
-    //   name: '',
-    //   type: '',
-    //   region: '',
-    //   industry: '',
-    //   company: '',
-    //   phone: '',
-    //   creditRating: '',
-    //   address: '',
-    //   contacts: [
-    //     { name: '', position: '', phone: '', email: '' }
-    //   ],
-    //   remarks: '',
-    //   attachments: []
-    // }
-    defaultValues: initialData || (
-      isSalesRep
-        ? {
-            name: '',
-            type: '',
-            region: '',
-            industry: '',
-            company: '',
-            phone: '',
-            creditRating: '',
-            address: '',
-            contacts: [
-              {
-                name: currentUser.name || '',
-                position: currentUser.role || currentUser.position || '',
-                phone: currentUser.phone || '',
-                email: currentUser.email || ''
+      resolver: zodResolver(formSchema),
+      defaultValues: {
+        // 合并初始数据和默认值，确保attachments始终为数组
+        ...(initialData || (
+          isSalesRep
+            ? {
+                name: '',
+                type: '',
+                region: '',
+                industry: '',
+                company: '',
+                phone: '',
+                creditRating: '',
+                address: '',
+                contacts: [
+                  {
+                    name: currentUser.name || '',
+                    position: currentUser.role || currentUser.position || '',
+                    phone: currentUser.phone || '',
+                    email: currentUser.email || ''
+                  }
+                ],
+                remarks: '',
               }
-            ],
-            remarks: '',
-            attachments: []
-          }
-        : {
-            name: '',
-            type: '',
-            region: '',
-            industry: '',
-            company: '',
-            phone: '',
-            creditRating: '',
-            address: '',
-            contacts: [
-              { name: '', position: '', phone: '', email: '' }
-            ],
-            remarks: '',
-            attachments: []
-          }
-    )
-  });
+            : {
+                name: '',
+                type: '',
+                region: '',
+                industry: '',
+                company: '',
+                phone: '',
+                creditRating: '',
+                address: '',
+                contacts: [
+                  { name: '', position: '', phone: '', email: '' }
+                ],
+                remarks: '',
+              }
+        )),
+        // 强制初始化为空数组，覆盖可能的undefined或无效值
+        attachments: []
+      }
+    });
+
+  useEffect(() => {
+      form.setValue('attachments', []);
+    }, [form, initialData]);
+
+
+  const handlePreview = async (filepath) => {
+    try {
+      const blob = await previewAttachment(filepath);
+      const fileUrl = URL.createObjectURL(blob);
+      window.open(fileUrl, '_blank');
+      window.addEventListener('unload', () => URL.revokeObjectURL(fileUrl));
+    } catch (error) {
+      console.error('预览附件失败：', error);
+      alert('预览失败：' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // 新增：标记附件为待删除
+  const handleMarkDelete = (filepath) => {
+    // 切换状态：已标记则取消，未标记则添加
+    if (attachmentsToDelete.includes(filepath)) {
+      setAttachmentsToDelete(attachmentsToDelete.filter(path => path !== filepath));
+    } else {
+      setAttachmentsToDelete([...attachmentsToDelete, filepath]);
+    }
+  };
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'contacts'
   });
 
-  // const onSubmit = (data) => {
-  //   // 如果是新增，生成客户ID
-  //   if (!initialData) {
-  //     data.id = 'C' + generateId().substring(0, 5);
-  //   }
-    
-  //   console.log('客户信息提交成功:', data);
-  //   onSuccess();
-  // };
+  // 提交逻辑（核心变更：增加删除附件步骤）
   const onSubmit = async (data) => {
+    setIsSubmitting(true);
     try {
-      
-      // 获取当前登录用户
-      const currentUser = getCurrentUser();
-      const now = new Date().toISOString();
+      const submitData = { ...data };
+      delete submitData.attachments;
 
-      // 如果是修改客户，追加修改时间和修改人
-      if (initialData) {
-        data.modifiedAt = now;
-        data.modifiedBy = currentUser.name || currentUser.username || '未知用户';
-      }
-
+      // 1. 提交客户基本信息，获取customerId
       let response;
-      let isCreate = !initialData;
-      if (isCreate) {
-        // 新建客户
-        response = await fetch('/api/customer/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+      if (initialData) {
+        submitData.modifiedAt = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+        submitData.modifiedBy = currentUser.name || currentUser.username || '未知用户';
+        if (!submitData.remarks) delete submitData.remarks;
+        response = await updateCustomer(submitData);
       } else {
-        // 修改客户
-        response = await fetch(`/api/customer/update/${data.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+        response = await createCustomer(submitData);
+      }
+      const customerId = response.customerId || initialData.id; // 编辑时用初始ID
+
+      // 2. 上传新附件
+      const newAttachments = form.getValues('attachments') || [];
+      if (newAttachments.length > 0) {
+        await uploadCustomerAttachments(customerId, newAttachments);
       }
 
-      const result = await response.json();
-      // === 新增弹窗提示 ===
-      if (result.customer && result.customer.id) {
-        window.alert(
-          `${isCreate ? '创建' : '修改'}客户 ${result.customer.id} 信息成功！`
-        );
-      } else {
-        window.alert(`${isCreate ? '创建' : '修改'}客户信息成功！`);
+      // 3. 删除标记为待删除的附件
+      if (attachmentsToDelete.length > 0) {
+        // 批量删除（逐个调用接口，可根据后端能力优化为批量接口）
+        for (const filepath of attachmentsToDelete) {
+          await deleteAttachment(filepath);
+        }
       }
-      onSuccess();
+
+      // 4. 操作成功
+      const successMsg = initialData 
+        ? `客户修改成功，客户编号：${initialData.id}` 
+        : `客户创建成功，客户编号：${customerId}`;
+      alert(successMsg);
+      if (typeof onSuccess === 'function') {
+        onSuccess(response);
+      } else {
+        window.location.reload();
+      }
+
     } catch (error) {
-      console.error('提交失败:', error);
+      console.error(`${initialData ? '修改' : '创建'}客户失败:`, error);
+      alert(`${initialData ? '客户修改' : '客户创建'}失败：${error.message || '未知错误'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-  // 新增
-  
-  const [contactOptions, setContactOptions] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const { toast } = useToast();
+
 
   const handleContactSearch = async (keyword) => {
     setSearchLoading(true);
@@ -311,7 +339,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         <SelectItem value="华中">华中</SelectItem>
                         <SelectItem value="西南">西南</SelectItem> */}
                         {REGION_OPTIONS.map((option) => (
-                          <SelectItem key={option.code} value={option.code}>
+                          <SelectItem key={option.code} value={option.name}>
                             {option.code} {option.name}
                           </SelectItem>
                         ))}
@@ -343,7 +371,7 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         <SelectItem value="互联网">互联网</SelectItem>
                         <SelectItem value="教育">教育</SelectItem> */}
                         {INDUSTRY_OPTIONS.map((option) => (
-                          <SelectItem key={option.code} value={option.code}>
+                          <SelectItem key={option.code} value={option.name}>
                             {option.code} {option.name}
                           </SelectItem>
                         ))}
@@ -624,10 +652,12 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
               </Button> */}
             </div>
             
+            {/* 附件上传部分（核心变更） */}
             <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium mb-4">附件上传</h3>
+              <h3 className="text-lg font-medium mb-4">附件管理</h3>
               
-              <div className="flex items-center">
+              {/* 1. 上传新附件 */}
+              <div className="flex items-center mb-6">
                 <label className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md cursor-pointer hover:bg-blue-700">
                   <Upload className="h-4 w-4 mr-2" />
                   选择文件
@@ -641,36 +671,92 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                 <span className="ml-4 text-sm text-gray-500">支持合同、营业执照等文件</span>
               </div>
               
-              <div className="mt-4">
-                {form.watch('attachments')?.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-md mb-2">
-                    <div className="flex items-center">
-                      <FileText className="h-5 w-5 text-gray-500 mr-2" />
-                      <span className="text-sm">{file.name}</span>
+              {/* 2. 新上传的附件预览 */}
+              <div className="mt-4 mb-8">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">待上传的新附件：</h4>
+                {form.watch('attachments')?.length > 0 ? (
+                  form.watch('attachments').map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-md mb-2">
+                      <div className="flex items-center">
+                        <FileText className="h-5 w-5 text-gray-500 mr-2" />
+                        <span className="text-sm">{file.name}</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => removeFile(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">暂无新附件</p>
+                )}
               </div>
+              
+              {/* 3. 已有附件（编辑模式显示） */}
+              {initialData && existingAttachments.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    已有附件（{attachmentsToDelete.length > 0 ? `待删除: ${attachmentsToDelete.length}个` : ''}）：
+                  </h4>
+                  <div className="space-y-2">
+                    {existingAttachments.map((attachment, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex items-center justify-between p-3 border rounded-md ${
+                          attachmentsToDelete.includes(attachment.filepath) 
+                            ? 'bg-red-50 border-red-200' 
+                            : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <FileText className="h-5 w-5 text-gray-500 mr-2" />
+                          <span className="text-sm mr-4">{attachment.filename}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handlePreview(attachment.filepath)}
+                            className="h-7 text-blue-600 p-0"
+                            type="button"
+                          >
+                            <Eye className="h-4 w-4 mr-1" /> 查看
+                          </Button>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleMarkDelete(attachment.filepath)}
+                          className={attachmentsToDelete.includes(attachment.filepath) ? 'text-red-500' : ''}
+                          type="button"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             
+           {/* 提交按钮修改（添加加载状态） */}
             <div className="flex justify-end space-x-4 pt-6 border-t">
               <Button 
                 type="button" 
                 variant="outline" 
                 className="border-blue-300 text-blue-600"
                 onClick={onCancel}
+                disabled={isSubmitting}
               >
                 取消
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                提交客户信息
+              <Button 
+                type="submit" 
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? '提交中...' : '提交客户信息'}
               </Button>
             </div>
           </form>
