@@ -18,10 +18,15 @@ const InvoiceDetail = ({ invoice }) => {
             <p>到期日期: <span className="font-medium">{formatDate(invoice.dueDate)}</span></p>
           </div>
         </div>
-        <div className="text-right">
-          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
-          <p className="mt-2 text-sm text-gray-500">企业LOGO</p>
-        </div>
+        <div className="flex flex-col items-center">
+  <img
+    src="/logo.png" // public 下的路径
+    alt="企业LOGO"
+    className="border-2 border-dashed rounded-xl w-16 h-16 object-cover"
+  />
+  <p className="mt-2 text-sm text-gray-500">企业LOGO</p>
+</div>
+
       </div>
       
       {/* Order and Customer Info */}
