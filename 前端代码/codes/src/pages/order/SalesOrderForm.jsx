@@ -770,7 +770,6 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
                         <SelectItem value="待付款">待付款</SelectItem>
                         <SelectItem value="已付款">已付款</SelectItem>
                         <SelectItem value="已取消">已取消</SelectItem>
-                        <SelectItem value="已发货">已发货</SelectItem> {/* 补充状态 */}
                       </SelectContent>
                     </Select>
                     <FormMessage />

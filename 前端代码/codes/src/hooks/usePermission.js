@@ -98,26 +98,34 @@ export const usePermission = () => {
 
   // 检查模块权限
   const hasModulePermission = (moduleName) => {
+    // 首页无需权限，始终返回 true
+  if (moduleName === "首页") {
+    return true;
+  }
     const moduleKey = Object.keys(MODULE_MAP).find(key => 
       MODULE_MAP[key].includes(moduleName)
     );
     return moduleKey ? permissions[moduleKey] : false;
   };
 
-  // 检查路由权限
   const hasRoutePermission = (path) => {
-    // 首页所有角色都能访问
-  if (path === "/" || path === "/home") return true;
-    const routeMap = {
-      '/customer': 'customer',
-      '/order': 'sales',
-      '/inventory': 'inventory',
-      '/finance': 'finance'
-    };
-    
-    const moduleKey = Object.keys(routeMap).find(key => path.startsWith(key));
-    return moduleKey ? permissions[routeMap[moduleKey]] : true;
+  if (path === "/" || path === "/home") {
+    console.log("访问首页权限：允许");
+    return true;
+  }
+  
+  const routeMap = {
+    '/customer': 'customer',
+    '/order': 'sales',
+    '/inventory': 'inventory',
+    '/finance': 'finance'
   };
+  
+  const moduleKey = Object.keys(routeMap).find(key => path.startsWith(key));
+  const hasPermission = moduleKey ? permissions[routeMap[moduleKey]] : true;
+  console.log(`访问路径 ${path} 权限：${hasPermission}`);
+  return hasPermission;
+};
 
   return {
     currentRole,

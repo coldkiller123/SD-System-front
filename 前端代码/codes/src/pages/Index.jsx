@@ -75,7 +75,7 @@ const Index = () => {
 
   // api/activity.js
  const fetchDashboardData = async () => {
-  const res = await fetch('/api/activities/latest');
+  const res = await fetch('http://localhost:8080/api/activities/latest');
   if (!res.ok) throw new Error('无法获取最近动态');
   return await res.json(); // 返回一个数组
 };
@@ -213,7 +213,7 @@ const { data, isLoading } = useQuery({
               onClick={() => navigate('/inventory/delivery-orders')}
               disabled={!permissions.inventory}
             >
-              <Package className="mr-2 h-4 w-4" /> 查看库存变化
+              <Package className="mr-2 h-4 w-4" /> 查看库存相关
             </Button>
           </CardContent>
         </Card>

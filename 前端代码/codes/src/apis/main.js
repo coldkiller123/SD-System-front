@@ -1,5 +1,4 @@
-import request from './request'; // 通常会创建一个axios实例并导出
-
+import request from './request'; 
 
 //HXY
 
@@ -8,6 +7,51 @@ import request from './request'; // 通常会创建一个axios实例并导出
  * @param {string} id - 客户ID
  * @returns {Promise} - 包含客户详情的Promise
  */
+export const createCustomer = async (customerData) => {
+  return await request.post('/customer/create', customerData);
+};
+
+
+//附件上传
+export const uploadCustomerAttachments = (customerId, files) => {
+  const formData = new FormData();
+  formData.append('id', customerId);
+  files.forEach(file => {
+    formData.append('file', file);
+  });
+
+  return request({
+    url: '/customer/upload',  
+    method: 'POST',          
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
+
+
+//文件预览接口
+export const previewAttachment = (filepath) => {
+  return request.get('/attachments/preview-by-filepath', {
+    params: {
+      filepath: filepath 
+    },
+    responseType: 'blob' 
+  });
+};
+
+
+
+//删除附件接口
+export const deleteAttachment = (filepath) => {
+  return request.delete('/attachments/delete-by-filepath', {
+    params: {
+      filepath: filepath 
+    }
+  });
+};
+
 
 
 /**
@@ -15,6 +59,16 @@ import request from './request'; // 通常会创建一个axios实例并导出
  * @param {string} id - 客户ID
  * @returns {Promise} - 包含客户详情的Promise
  */
+export const updateCustomer = async (customerData) => {
+  const { id, ...updateData } = customerData;
+    if (!id) {
+    throw new Error('客户ID不能为空'); // 明确抛出错误，便于调试
+  }
+  
+  console.log('更新客户ID:', id, '更新数据:', updateData);
+  
+  return await request.put(`/customer/update?id=${id}`, updateData);
+};
 
 
 
@@ -181,7 +235,6 @@ export const updateOrder = async (id, data) => {
 
 
 
-
 /**
  * 获取销售订单详情（含操作历史）
  * @param {string} id - 订单编号（必填）
@@ -200,25 +253,53 @@ export const getOrderDetail = async (id) => {
 
 
 
+/**
+ * 获取询价单列表（适配新接口）
+ * @param {Object} params - 请求参数
+ * @param {number} [params.pageIndex=0] - 当前页码（从0开始，默认0）
+ * @param {number} [params.pageSize=10] - 每页数量（默认10）
+ * @param {string} [params.search] - 统一搜索关键词（用于匹配询价单号和客户名称）
+ * @param {string} [params.status] - 状态筛选（未报价/已报价）
+ * @returns {Promise} - 包含询价单列表和分页信息的响应
+ */
+export const getInquiries = async (params = {}) => {
+  // 设置默认参数
+  const defaultParams = {
+    pageIndex: 0,
+    pageSize: 10,
+    ...params
+  };
+
+  // 构建查询参数（仅传递有效参数）
+  const validParams = Object.entries(defaultParams).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+
+  const response = await request.get('/api/inquiries', { params: validParams });
+  return response;
+};
+
 
 /**
- * 询价单列表
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
+ * 创建询价单接口
+ * @param {Object} data - 询价单数据
+ * @returns {Promise} - 接口响应
  */
+export const createInquiry = async (data) => {
+  // 使用封装的request工具发送POST请求
+  return await request.post('/api/inquiries', data);
+};
 
 
-/**
- * 更新询价单状态
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
- */
 
-/**
- * 创建询价单
- * @param {string} id - 订单编号（必填）
- * @returns {Promise} - 包含订单详情和操作历史的响应数据
- */
+//更新询价单状态
+export const updateInquiryStatus = async (inquiryId, statusData) => {
+  return await request.put(`/api/inquiries/${inquiryId}/status`, statusData);
+};
+
 
 
 
@@ -288,7 +369,7 @@ export const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, war
 /**
  * 获取状态为已发货&已完成的订单列表
  * @param {Object} params - 请求参数
- * @param {number} [params.page=0] - 页码（从0开始，默认0）
+ * @param {number} [params.page=1] - 页码（从1开始，默认1）
  * @param {number} [params.pageSize=10] - 每页数量（默认10）
  * @param {string} [params.search] - 搜索关键词（订单号/发货单号/客户名称）
  * @returns {Promise} - 包含订单列表和分页信息的响应
@@ -296,7 +377,7 @@ export const createDeliveryOrder = async ({ orderIds, remarks, deliveryDate, war
 export const getInprocessOrders = async (params = {}) => {
   // 设置默认参数，合并用户传入的参数
   const {
-    page = 0,
+    page = 1,
     pageSize = 10,
     search
   } = params;
@@ -309,13 +390,16 @@ export const getInprocessOrders = async (params = {}) => {
       search: search || undefined // 无搜索时不传递该参数
     }
   });
+  console.log('后端返回的原始响应：', response);
+  console.log('客户详情数据：', response.info); 
+  console.log('客户详情数据：', response.data); 
 
   // 解析响应数据，转换为前端易用的格式
   return {
-    total: response.data.data.total,
-    page: response.data.data.page,
-    pageSize: response.data.data.page_size,
-    orders: response.data.data.orders.map(order => ({
+    total: response.data.total,
+    page: response.data.page,
+    pageSize: response.data.page_size,
+    orders: response.data.orders.map(order => ({
       id: order.id,
       deliveryOrderId: order.deliveryOrderId,
       customerName: order.customerName,

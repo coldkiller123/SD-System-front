@@ -1,4 +1,12 @@
 import request from './request';
+import { toast } from 'sonner'; // 假设你用 sonner 做提示，可根据实际调整
+
+// 统一处理请求错误
+const handleError = (error) => {
+  const errorMessage = error.response?.data?.message || '请求失败，请稍后重试';
+  toast.error(errorMessage);
+  return Promise.reject(error);
+};
 
 /**
  * 发送邮箱验证码
@@ -9,12 +17,18 @@ import request from './request';
  * @returns {Promise} - 包含发送结果的Promise
  */
 export const sendEmailCode = async (params) => {
-  const response = await request({
-    url: '/email/send-code',
-    method: 'POST',
-    data: params
-  });
-  return response;
+  try {
+    const response = await request({
+      url: 'api/auth/send-email-code',
+      method: 'POST',
+      data: params
+    });
+    // 可在这里统一做成功提示（如果需要）
+    // toast.success('验证码发送成功'); 
+    return response;
+  } catch (error) {
+    return handleError(error);
+  }
 };
 
 /**
@@ -27,12 +41,16 @@ export const sendEmailCode = async (params) => {
  * @returns {Promise} - 包含验证结果的Promise
  */
 export const verifyEmailCode = async (params) => {
-  const response = await request({
-    url: '/email/verify-code',
-    method: 'POST',
-    data: params
-  });
-  return response;
+  try {
+    const response = await request({
+      url: 'api/auth/verify-email-code',
+      method: 'POST',
+      data: params
+    });
+    return response;
+  } catch (error) {
+    return handleError(error);
+  }
 };
 
 /**
@@ -44,12 +62,26 @@ export const verifyEmailCode = async (params) => {
  * @returns {Promise} - 包含重置结果的Promise
  */
 export const resetPassword = async (params) => {
-  const response = await request({
-    url: '/user/reset-password',
-    method: 'POST',
-    data: params
-  });
-  return response;
+  // 额外参数校验，提前拦截错误
+  if (params.newPassword !== params.confirmPassword) {
+    toast.error('两次输入的密码不一致');
+    return Promise.reject(new Error('两次输入的密码不一致'));
+  }
+  if (params.newPassword.length < 6) {
+    toast.error('新密码长度不能少于6位');
+    return Promise.reject(new Error('新密码长度不能少于6位'));
+  }
+  
+  try {
+    const response = await request({
+      url: '/user/reset-password',
+      method: 'POST',
+      data: params
+    });
+    return response;
+  } catch (error) {
+    return handleError(error);
+  }
 };
 
 /**
@@ -58,10 +90,14 @@ export const resetPassword = async (params) => {
  * @returns {Promise} - 包含用户信息的Promise
  */
 export const checkUserExists = async (username) => {
-  const response = await request({
-    url: '/user/check',
-    method: 'GET',
-    params: { username }
-  });
-  return response;
-}; 
+  try {
+    const response = await request({
+      url: '/user/check',
+      method: 'GET',
+      params: { username }
+    });
+    return response;
+  } catch (error) {
+    return handleError(error);
+  }
+};
