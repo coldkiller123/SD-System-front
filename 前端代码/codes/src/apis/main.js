@@ -425,9 +425,19 @@ export const updateOrderStatusToCompleted = async (orderId) => {
   }
 
   const response = await request.put(`/api/orders/${orderId}/status`, {
-    status: '已完成' // 固定值，仅支持更新为"已完成"
+    status: '已完成'
   });
 
+  // 新增：判断 data 是否为 null，避免访问 code 报错
+  if (response.data === null) {
+    // 业务上成功，直接返回 code 和 message（可自定义 code，或用 HTTP 状态码）
+    return {
+      code: response.code || 200, // 用 HTTP 状态码兜底
+      message: response.message || '状态更新成功'
+    };
+  }
+
+  // 其他情况（如果 data 是对象，继续用原逻辑）
   return {
     code: response.data.code,
     message: response.data.message
