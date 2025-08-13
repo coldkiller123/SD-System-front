@@ -308,9 +308,10 @@ const CustomerForm = ({ initialData, onSuccess, onCancel }) => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="普通客户">普通客户</SelectItem>
-                        <SelectItem value="VIP客户">VIP客户</SelectItem>
-                        <SelectItem value="战略客户">战略客户</SelectItem>
+                        <SelectItem value="RETAIL 零售客户">零售客户</SelectItem>
+                        <SelectItem value="WHOLE 批发客户">批发客户</SelectItem>
+                        <SelectItem value="B2B 企业客户">企业客户</SelectItem>
+                        <SelectItem value="GOV 政府机构">政府机构</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
