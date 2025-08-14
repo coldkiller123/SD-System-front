@@ -495,7 +495,7 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
       totalAmount: 0,
       paidAmount: 0,
       status: '待付款',
-      salesPerson: '销售员1',
+      salesPerson: '销售小孙',
       remarks: '',
       createdAt: format(new Date(), 'yyyy-MM-dd', { locale: zhCN })
     }
@@ -793,9 +793,9 @@ const SalesOrderForm = ({ initialData, onSuccess, onCancel }) => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="销售员1">销售员1</SelectItem>
-                        <SelectItem value="销售员2">销售员2</SelectItem>
-                        <SelectItem value="销售员3">销售员3</SelectItem>
+                        <SelectItem value="销售小孙">销售小孙</SelectItem>
+                        <SelectItem value="销售小何">销售小何</SelectItem>
+                        <SelectItem value="销售组长凝凝子">销售组长凝凝子</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

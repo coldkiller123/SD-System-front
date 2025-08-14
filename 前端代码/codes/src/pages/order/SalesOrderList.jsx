@@ -256,24 +256,27 @@ const SalesOrderList = () => {
                       </span>
                     </TableCell>
                     <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-blue-600 hover:bg-blue-100"
-                        onClick={() => window.location.href = `#/order/detail/${order.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="text-blue-600 hover:bg-blue-100 ml-1"
-                        onClick={() => handleEdit(order)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+                    // 修改操作列中的编辑按钮，添加禁用条件
+<TableCell className="text-right">
+  <Button 
+    variant="ghost" 
+    size="icon"
+    className="text-blue-600 hover:bg-blue-100"
+    onClick={() => window.location.href = `#/order/detail/${order.id}`}
+  >
+    <Eye className="h-4 w-4" />
+  </Button>
+  <Button 
+    variant="ghost" 
+    size="icon"
+    className="text-blue-600 hover:bg-blue-100 ml-1"
+    onClick={() => handleEdit(order)}
+    disabled={order.status === '已完成'} // 当状态为已完成时禁用编辑按钮
+    title={order.status === '已完成' ? '已完成订单不可编辑' : ''} // 鼠标悬停提示
+  >
+    <Pencil className="h-4 w-4" />
+  </Button>
+</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

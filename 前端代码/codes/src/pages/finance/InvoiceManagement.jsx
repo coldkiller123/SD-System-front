@@ -211,27 +211,6 @@ const handleExportPDFClick = useCallback(async (invoiceId) => {
     }
   };
 
-  // 搜索框回车或点击搜索
-  const handleSearch = () => {
-    setSearchTerm(searchInput.trim());
-  };
-
-  // 搜索框清空
-  const handleClearSearch = () => {
-    setSearchInput('');
-    setSearchTerm('');
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  };
-
-  // 回车事件
-  const handleInputKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
   if (isLoading) return <div className="text-center py-10">加载中...</div>;
   if (isError) return <div className="text-center py-10 text-red-500">加载数据失败</div>;
 
