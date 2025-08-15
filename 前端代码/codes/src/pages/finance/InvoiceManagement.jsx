@@ -148,43 +148,79 @@ const InvoiceManagement = () => {
   }, 500); // 可根据实际渲染速度调整（300-1000ms）
   }, [invoiceData]);
 
-  // 导出PDF函数
+// 导出PDF函数
 const handleExportPDFClick = useCallback(async (invoiceId) => {
+  if (!invoiceId) {
+    console.error('发票ID不存在，无法下载');
+    alert('请先生成完整发票再尝试下载');
+    return;
+  }
+  
   const invoiceElement = document.getElementById('invoice-preview');
   if (!invoiceElement) return;
 
-  // 暂时隐藏按钮
-  const footer = invoiceElement.querySelector('.pdf-hide');
-  if (footer) footer.style.display = 'none';
+  // 仅隐藏操作按钮区域（保留底部时间等信息）
+  const actionButtons = invoiceElement.querySelector('.pdf-hide');
+  const originalButtonStyle = actionButtons ? actionButtons.style.display : '';
+  if (actionButtons) actionButtons.style.display = 'none';
+
+  // 针对右侧多余元素的精确处理（不影响底部时间）
+  const extraElements = invoiceElement.querySelectorAll('.sidebar, .aside, .extra-content');
+  const originalElementStyles = Array.from(extraElements).map(el => ({
+    element: el,
+    style: el.style.display
+  }));
+  extraElements.forEach(el => el.style.display = 'none');
 
   try {
+    // 获取发票元素实际宽高（包含底部时间信息）
     const rect = invoiceElement.getBoundingClientRect();
+    const contentWidth = rect.width;
+    const contentHeight = rect.height;
+
+    // 生成图片（确保包含所有必要内容）
     const dataUrl = await toPng(invoiceElement, {
       backgroundColor: '#ffffffff',
       quality: 1.0,
-      width: rect.width,
-      height: rect.height
+      width: contentWidth,
+      height: contentHeight,
+      // 确保底部内容被完整捕获
+      scrollY: 0,
+      scrollX: 0
     });
 
+    // 初始化PDF并设置A4尺寸
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    const targetWidth = pdfWidth * 1.1;
-    const scale = targetWidth / rect.width;
-    const scaledHeight = rect.height * scale;
-    const finalScale = scaledHeight > pdfHeight ? pdfHeight / rect.height : scale;
+    // 优化缩放逻辑，确保内容完整显示
+    const targetWidth = pdfWidth * 0.95; // 更保守的宽度比例，避免内容溢出
+    const scale = targetWidth / contentWidth;
+    const scaledHeight = contentHeight * scale;
+    const finalScale = scaledHeight > pdfHeight ? pdfHeight / contentHeight : scale;
 
-    const scaledWidth = rect.width * finalScale;
-    const adjustedHeight = rect.height * finalScale;
+    // 计算最终尺寸和居中位置
+    const scaledWidth = contentWidth * finalScale;
+    const adjustedHeight = contentHeight * finalScale;
     const x = (pdfWidth - scaledWidth) / 2;
     const y = (pdfHeight - adjustedHeight) / 2;
 
+    // 添加图片到PDF
     pdf.addImage(dataUrl, 'PNG', x, y, scaledWidth, adjustedHeight);
     pdf.save(`invoice_${invoiceId}.pdf`);
+
+  } catch (error) {
+    console.error('导出PDF失败:', error);
+    alert('导出PDF失败，请重试');
   } finally {
     // 还原按钮显示
-    if (footer) footer.style.display = '';
+    if (actionButtons) actionButtons.style.display = originalButtonStyle;
+    
+    // 还原其他元素显示
+    originalElementStyles.forEach(({ element, style }) => {
+      element.style.display = style;
+    });
   }
 }, []);
 
@@ -472,17 +508,18 @@ const handleExportPDFClick = useCallback(async (invoiceId) => {
                 )}
               </div>
             </CardHeader>
-            <CardContent className="h-[calc(100%-120px)] overflow-y-auto">
-              {invoiceData ? (
-                <InvoiceDetail invoice={invoiceData} />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                  <FileText className="h-16 w-16 text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-500">未选择订单</h3>
-                  <p className="text-gray-400 mt-1">请从左侧列表选择订单生成发票</p>
-                </div>
-              )}
-            </CardContent>
+            <CardContent className="min-h-[calc(100%-120px)] overflow-visible">
+              {/* 发票内容 */}
+                            {invoiceData ? (
+                         <InvoiceDetail invoice={invoiceData} />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                        <FileText className="h-16 w-16 text-gray-300 mb-4" />
+                          <h3 className="text-lg font-medium text-gray-500">未选择订单</h3>
+                             <p className="text-gray-400 mt-1">请从左侧列表选择订单生成发票</p>
+                                  </div>
+                    )}
+                </CardContent>
             {invoiceData && (
               <CardFooter className="bg-blue-50 border-t border-blue-100 py-3 justify-center  pdf-hide print:hidden">
                 <div className="flex space-x-3">
